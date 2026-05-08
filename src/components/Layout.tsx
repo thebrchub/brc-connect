@@ -12,7 +12,8 @@ import {
   ChevronRight,
   ClipboardList,
   History,
-  UserCog
+  UserCog,
+  Globe // <-- Added Globe icon
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
@@ -118,8 +119,26 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* Logout Section */}
-        <div className="p-3 border-t border-white/5 bg-[#000000] shadow-[inset_0_4px_10px_rgba(0,0,0,0.5)]">
+        {/* External Website & Logout Section */}
+        <div className="p-3 border-t border-white/5 bg-[#000000] shadow-[inset_0_4px_10px_rgba(0,0,0,0.5)] space-y-2">
+          
+          {/* Added Website Link */}
+          <a
+            href="https://www.brchub.tech"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`relative flex items-center w-full rounded-xl text-sm font-bold transition-all duration-200 group border border-transparent text-cyan-500/80 hover:text-cyan-400 hover:bg-[#09090b] hover:border-white/5 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_8px_rgba(0,0,0,0.4)] ${
+              isCollapsed ? "justify-center p-3" : "px-4 py-3 gap-3.5"
+            }`}
+          >
+            <Globe size={20} className="shrink-0 transition-transform duration-200 group-hover:scale-110" />
+            {!isCollapsed && <span>BRC Hub Website</span>}
+            {isCollapsed && (
+              <Tooltip label="Visit brchub.tech" side="right" />
+            )}
+          </a>
+
+          {/* Original Logout Button */}
           <button
             onClick={logout}
             className={`relative flex items-center w-full rounded-xl text-sm font-bold transition-all duration-200 group border border-transparent text-zinc-500 hover:text-red-400 hover:bg-[#09090b] hover:border-white/5 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_8px_rgba(0,0,0,0.4)] ${
@@ -196,7 +215,20 @@ export default function Layout() {
               </NavLink>
             ))}
           </nav>
-          <div className="p-4 border-t border-white/5 bg-[#000000] shadow-[inset_0_4px_10px_rgba(0,0,0,0.5)]">
+
+          <div className="p-4 border-t border-white/5 bg-[#000000] shadow-[inset_0_4px_10px_rgba(0,0,0,0.5)] space-y-2">
+            {/* Added Website Link for Mobile */}
+            <a
+              href="https://www.brchub.tech"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl border border-transparent text-sm font-bold text-cyan-500/80 hover:text-cyan-400 hover:bg-[#09090b] hover:border-white/5 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_8px_rgba(0,0,0,0.4)] transition-all"
+            >
+              <Globe size={20} />
+              BRC Hub Website
+            </a>
+
+            {/* Original Mobile Logout Button */}
             <button
               onClick={logout}
               className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl border border-transparent text-sm font-bold text-zinc-500 hover:text-red-400 hover:bg-[#09090b] hover:border-white/5 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_8px_rgba(0,0,0,0.4)] transition-all"
