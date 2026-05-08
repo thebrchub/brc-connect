@@ -5,6 +5,7 @@ import {
   X,
   Megaphone,
   ChevronRight,
+  Trash2,
   Users,
   Briefcase,
   Clock,
@@ -29,6 +30,7 @@ interface SimpleEmployee {
 }
 
 export default function CampaignsPage() {
+  const MAX_CITIES = 2;
   const [searchParams, setSearchParams] = useSearchParams();
   const [lastVisitedId, setLastVisitedId] = useState<string | null>(null);
 
@@ -56,7 +58,7 @@ export default function CampaignsPage() {
 
   const pageParam = parseInt(searchParams.get("page") || "1", 10);
 
-  const { data, isLoading, error } = useCampaigns(pageParam, 10);
+  const { data, isLoading, error, refetch } = useCampaigns(pageParam, 10);
   const create = useCreateCampaign();
   const navigate = useNavigate();
   
@@ -69,11 +71,12 @@ export default function CampaignsPage() {
   const [dropNoContact, setDropNoContact] = useState(true);
   const [assignedTo, setAssignedTo] = useState("");
   const [employees, setEmployees] = useState<SimpleEmployee[]>([]);
+  const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
   const role = getUserRole();
 
   // Helper function to normalize and deduplicate tags (Cities/Categories)
 // Helper function to normalize and deduplicate ANY comma-separated tags
-const normalizeAndDeduplicate = (input: string): string[] => {
+const normalizeAndDeduplicate = (input: string, maxItems?: number): string[] => {
   const uniqueItems = new Map<string, string>();
   
   input.split(",").forEach((item) => {
@@ -88,7 +91,7 @@ const normalizeAndDeduplicate = (input: string): string[] => {
         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(" ");
 
-      if (!uniqueItems.has(lowerKey)) {
+      if (!uniqueItems.has(lowerKey) && (!maxItems || uniqueItems.size < maxItems)) {
         uniqueItems.set(lowerKey, titleCased);
       }
     }
@@ -107,6 +110,7 @@ const normalizeAndDeduplicate = (input: string): string[] => {
 
   const campaigns = data?.data || [];
   const meta = data?.meta;
+  const uniqueCityCount = normalizeAndDeduplicate(cities).length;
 
   useEffect(() => {
     if (lastVisitedId && campaigns.length > 0) {
@@ -134,8 +138,15 @@ const normalizeAndDeduplicate = (input: string): string[] => {
   e.preventDefault();
   
   // Clean BOTH inputs before creating the payload
-  const cleanCities = normalizeAndDeduplicate(cities);
+  const allUniqueCities = normalizeAndDeduplicate(cities);
+  const cleanCities = normalizeAndDeduplicate(cities, MAX_CITIES);
   const cleanCategories = normalizeAndDeduplicate(categories);
+
+  if (allUniqueCities.length > MAX_CITIES) {
+    toast.error(`You can add at most ${MAX_CITIES} cities per campaign.`);
+    setCities(cleanCities.join(", "));
+    return;
+  }
 
   try {
     const payload: any = {
@@ -168,6 +179,26 @@ const normalizeAndDeduplicate = (input: string): string[] => {
     toast.error((err as Error).message);
   }
 }
+
+  async function handleDeleteCampaign(campaignId: string, campaignName: string) {
+    const ok = window.confirm(`Delete campaign "${campaignName}" and associated leads? This cannot be undone.`);
+    if (!ok) return;
+
+    setDeletingCampaignId(campaignId);
+    try {
+      const res = await api.delete<{ status: string; deleted_leads: number }>(`/campaigns/${campaignId}`);
+      toast.success(`Campaign deleted. Removed ${res.deleted_leads ?? 0} associated leads.`);
+      if (lastVisitedId === campaignId) {
+        sessionStorage.removeItem("lastVisitedCampaign");
+        setLastVisitedId(null);
+      }
+      await refetch();
+    } catch (err) {
+      toast.error((err as Error).message || "Failed to delete campaign");
+    } finally {
+      setDeletingCampaignId(null);
+    }
+  }
 
   return (
     <div className="animate-in fade-in duration-500">
@@ -217,16 +248,19 @@ const normalizeAndDeduplicate = (input: string): string[] => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 relative z-10">
             <div>
               <label className="block text-sm font-bold text-zinc-300 mb-2">
-                Target Cities <span className="text-zinc-500 font-normal ml-1">(comma separated)</span>
+                Target Cities <span className="text-zinc-500 font-normal ml-1">(comma separated, max {MAX_CITIES})</span>
               </label>
               <input
   value={cities}
   onChange={(e) => setCities(e.target.value)}
-  onBlur={() => setCities(normalizeAndDeduplicate(cities).join(", "))} // <-- UX Magic here
+  onBlur={() => setCities(normalizeAndDeduplicate(cities, MAX_CITIES).join(", "))}
   required
   className="w-full rounded-xl border border-white/5 bg-[#09090b] shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)] px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:bg-[#0c0c0e] focus:border-accent-start/50 transition-all"
-  placeholder="New York, Chicago, Miami"
+  placeholder="New York, Chicago"
 />
+              <p className={`mt-1 text-xs ${uniqueCityCount > MAX_CITIES ? "text-amber-300" : "text-zinc-500"}`}>
+                {uniqueCityCount}/{MAX_CITIES} cities selected
+              </p>
             </div>
             <div>
   <label className="block text-sm font-bold text-zinc-300 mb-2">
@@ -394,6 +428,24 @@ const normalizeAndDeduplicate = (input: string): string[] => {
                       </div>
 
                       {/* Neumorphic Arrow Button */}
+                      <button
+                        type="button"
+                        disabled={deletingCampaignId === c.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeleteCampaign(c.id, c.name);
+                        }}
+                        className="w-10 h-10 rounded-xl bg-[#09090b] border border-white/5 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.6),inset_0_2px_4px_rgba(255,255,255,0.02),0_4px_8px_rgba(0,0,0,0.5)] flex items-center justify-center hover:bg-red-500/10 transition-colors hidden md:flex disabled:opacity-50"
+                        title="Delete campaign"
+                      >
+                        {deletingCampaignId === c.id ? (
+                          <Loader2 size={16} className="text-red-400 animate-spin" />
+                        ) : (
+                          <Trash2 size={16} className="text-zinc-500 hover:text-red-400 transition-colors" />
+                        )}
+                      </button>
+
                       <div className="w-10 h-10 rounded-xl bg-[#09090b] border border-white/5 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.6),inset_0_2px_4px_rgba(255,255,255,0.02),0_4px_8px_rgba(0,0,0,0.5)] flex items-center justify-center group-hover:bg-accent-start/10 transition-colors hidden md:flex">
                         <ChevronRight size={18} className="text-zinc-500 group-hover:text-accent-start group-hover:translate-x-0.5 transition-all" />
                       </div>
