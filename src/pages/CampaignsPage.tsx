@@ -13,21 +13,13 @@ import {
   Info,
   Loader2
 } from "lucide-react";
-import CustomDropdown from "../components/CustomDropdown";
 import { useCampaigns, useCreateCampaign } from "../hooks/useApi";
-import { getUserRole } from "../hooks/useRole";
 import { api } from "../api/client";
 import StatusBadge from "../components/StatusBadge";
 import Pagination from "../components/Pagination";
 import Spinner from "../components/Spinner";
 import ErrorBox from "../components/ErrorBox";
 import toast from "react-hot-toast";
-
-interface SimpleEmployee {
-  id: string;
-  name: string;
-  email: string;
-}
 
 export default function CampaignsPage() {
   const MAX_CITIES = 2;
@@ -69,10 +61,8 @@ export default function CampaignsPage() {
   const [categories, setCategories] = useState("");
   const [autoRescrape, setAutoRescrape] = useState(false);
   const [dropNoContact, setDropNoContact] = useState(true);
-  const [assignedTo, setAssignedTo] = useState("");
-  const [employees, setEmployees] = useState<SimpleEmployee[]>([]);
+
   const [deletingCampaignId, setDeletingCampaignId] = useState<string | null>(null);
-  const role = getUserRole();
 
   // Helper function to normalize and deduplicate tags (Cities/Categories)
 // Helper function to normalize and deduplicate ANY comma-separated tags
@@ -100,13 +90,7 @@ const normalizeAndDeduplicate = (input: string, maxItems?: number): string[] => 
   return Array.from(uniqueItems.values());
 };
 
-  useEffect(() => {
-    if (role === "admin") {
-      api.get<{ data: SimpleEmployee[] }>("/users/employees")
-        .then((res) => setEmployees(res.data || []))
-        .catch(() => {});
-    }
-  }, [role]);
+
 
   const campaigns = data?.data || [];
   const meta = data?.meta;
@@ -158,8 +142,6 @@ const normalizeAndDeduplicate = (input: string, maxItems?: number): string[] => 
       drop_no_contact: dropNoContact,
     };
     
-    if (assignedTo) payload.assigned_to = assignedTo;
-    
     // ... rest of your API call
     
     const result = await create.mutateAsync(payload);
@@ -172,8 +154,6 @@ const normalizeAndDeduplicate = (input: string, maxItems?: number): string[] => 
     setCategories("");
     setAutoRescrape(false);
     setDropNoContact(true);
-    setAssignedTo("");
-    
     navigate(`/campaigns/${result.id}`);
   } catch (err) {
     toast.error((err as Error).message);
@@ -278,27 +258,7 @@ const normalizeAndDeduplicate = (input: string, maxItems?: number): string[] => 
 </div>
           </div>
 
-          {/* Assign to Employee (admin only) */}
-          {role === "admin" && employees.length > 0 && (
-            // FIX: Bumped z-index up to 50 so the dropdown breaks out and sits above the warning banner below it
-            <div className="relative z-50">
-              <label className="block text-sm font-bold text-zinc-300 mb-2">
-                Assign to Employee <span className="text-zinc-500 font-normal ml-1">(optional)</span>
-              </label>
-              <CustomDropdown
-                value={assignedTo}
-                onChange={(val) => setAssignedTo(val)}
-                placeholder="-- Unassigned --"
-                options={[
-                  { value: "", label: "-- Unassigned --" },
-                  ...employees.map(emp => ({
-                    value: emp.id,
-                    label: emp.name // Much cleaner, single-line UI
-                  }))
-                ]}
-              />
-            </div>
-          )}
+
 
           {/* Warning Banner - Recessed */}
           <div className="flex items-start gap-2.5 mt-2 bg-[#09090b] border border-amber-500/20 shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)] p-4 rounded-xl relative z-10">
