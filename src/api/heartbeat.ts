@@ -22,7 +22,7 @@ export function startHeartbeat() {
   if (role !== "employee") return;
 
   sendHeartbeat();
-  heartbeatInterval = setInterval(sendHeartbeat, 60_000);
+  heartbeatInterval = setInterval(sendHeartbeat, 300_000);
 
   document.addEventListener("visibilitychange", handleVisibility);
 }

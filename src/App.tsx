@@ -23,6 +23,10 @@ import AdminManagementPage from "./pages/AdminManagementPage";
 import CRMDashboardPage from "./pages/CRMDashboardPage";
 import EmployeeActivityPage from "./pages/EmployeeActivityPage";
 import CalendarPage from "./pages/CalendarPage";
+import ChatPage from "./pages/ChatPage";
+import ProfilePage from "./pages/ProfilePage";
+
+import { ChatProvider } from "./chat/ChatContext";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
@@ -66,7 +70,9 @@ export default function App() {
           <Route
             element={
               <ProtectedRoute>
-                <Layout />
+                <ChatProvider>
+                  <Layout />
+                </ChatProvider>
               </ProtectedRoute>
             }
           >
@@ -90,6 +96,8 @@ export default function App() {
             <Route path="crm/history" element={<RoleGuard allowed={["employee"]}><CRMHistoryPage /></RoleGuard>} />
 
             <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
