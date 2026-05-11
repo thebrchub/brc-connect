@@ -11,7 +11,7 @@ interface PresignResponse {
 
 /** Request a presigned upload URL, then upload the file directly to S3. Returns the public file URL. */
 export async function uploadChatFile(file: File): Promise<{ fileUrl: string; mediaType: string }> {
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+  const API_URL = import.meta.env.VITE_API_URL || "https://connect-api.brchub.tech";
   const token = getToken();
 
   // 1. Get presigned URL from backend

@@ -288,7 +288,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // Seed active group calls from REST API on mount (survives refresh)
   useEffect(() => {
-    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+    const API_URL = import.meta.env.VITE_API_URL || "https://connect-api.brchub.tech";
     const token = getToken();
     if (!token) return;
 

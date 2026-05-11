@@ -28,7 +28,7 @@ export type ConnState = "connecting" | "connected" | "disconnected";
 
 type Listener = (...args: unknown[]) => void;
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_URL = import.meta.env.VITE_API_URL || "https://connect-api.brchub.tech";
 
 function wsUrl(): string {
   const base = API_URL.replace(/^http/, "ws");
