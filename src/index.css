@@ -86,6 +86,15 @@ h1, h2, h3, h4, h5, h6 {
   to { background-position: 0 0; }
 }
 
+@keyframes indeterminate-slide {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+
+.animate-indeterminate {
+  animation: indeterminate-slide 1.5s ease-in-out infinite;
+}
+
 /* 1. Counter-Clockwise Rotation */
 @keyframes spin-reverse {
   to {

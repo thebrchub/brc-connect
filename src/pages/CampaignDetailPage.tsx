@@ -74,6 +74,11 @@ export default function CampaignDetailPage() {
       ? Math.round((campaign.jobs_completed / campaign.jobs_total) * 100)
       : 0;
 
+  const showIndeterminate =
+    campaign.status === "running" &&
+    campaign.jobs_total > 0 &&
+    campaign.jobs_completed === 0;
+
   return (
     <div className="animate-in fade-in duration-500">
       
@@ -138,16 +143,23 @@ export default function CampaignDetailPage() {
             </div>
             
             {/* Deeply Recessed Progress Track */}
-            <div className="h-5 rounded-full bg-[#09090b] border border-white/5 overflow-hidden p-1 shadow-[inset_0_2px_6px_rgba(0,0,0,0.8)] ml-11">
+            <div className="h-5 rounded-full bg-[#09090b] border border-white/5 overflow-hidden p-1 shadow-[inset_0_2px_6px_rgba(0,0,0,0.8)] ml-11 relative">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-accent-start to-accent-end transition-all duration-1000 ease-out relative overflow-hidden shadow-[0_0_10px_rgba(52,211,153,0.5)]"
                 style={{ width: `${pct}%` }}
               >
                 {/* Active Processing Stripes Overlay */}
-                {campaign.status === "running" && pct < 100 && (
+                {campaign.status === "running" && pct > 0 && pct < 100 && (
                   <div className="absolute inset-0 bg-stripes animate-stripes opacity-60" />
                 )}
               </div>
+
+              {showIndeterminate && (
+                <>
+                  <div className="absolute inset-0 bg-stripes animate-stripes opacity-30" />
+                  <div className="absolute left-0 top-0 h-full w-20 rounded-full bg-white/10 animate-indeterminate" />
+                </>
+              )}
             </div>
           </div>
 
