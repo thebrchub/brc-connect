@@ -15,7 +15,7 @@ import {
   Camera,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import type { RoomMember, RoomListItem, ChatUser } from "./types";
+import type { RoomMember, RoomListItem } from "./types";
 import Avatar from "./Avatar";
 import {
   useUpdateGroup,
