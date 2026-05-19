@@ -277,7 +277,13 @@ export default function EmployeeActivityPage() {
                     {a.status.replace(/_/g, " ")}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-zinc-400 text-xs max-w-[240px] truncate">{a.notes || "-"}</td>
+                {/* 
+                  UX Fix: Replaced 'max-w-[240px] truncate' with 'min-w-[250px] max-w-md whitespace-normal break-words' 
+                  so that notes can flow properly across multiple lines.
+                */}
+                <td className="px-6 py-4 text-zinc-400 text-xs min-w-[250px] max-w-md whitespace-normal break-words">
+                  {a.notes || "-"}
+                </td>
                 <td className="px-6 py-4 text-zinc-400 text-xs">
                   {a.last_contact ? new Date(a.last_contact).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"}
                 </td>

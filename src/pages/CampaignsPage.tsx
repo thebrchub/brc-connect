@@ -22,7 +22,7 @@ import ErrorBox from "../components/ErrorBox";
 import toast from "react-hot-toast";
 
 export default function CampaignsPage() {
-  const MAX_CITIES = 2;
+  const MAX_CITIES = 10;
   const [searchParams, setSearchParams] = useSearchParams();
   const [lastVisitedId, setLastVisitedId] = useState<string | null>(null);
 

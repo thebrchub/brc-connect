@@ -79,6 +79,11 @@ export default function LeadsPage() {
   };
 
   const [cityInput, setCityInput] = useState(cityParam);
+
+  useEffect(() => {
+    setCityInput(cityParam);
+  }, [cityParam]);
+
   const { data, isLoading, error } = useLeads(filters);
   const updateLead = useUpdateLead();
 
