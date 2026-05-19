@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState } from "react";
 import {
   Phone,
   PhoneOff,
@@ -30,7 +30,6 @@ export default function GroupCallPanel({
   roomId,
   roomType,
   activeCall,
-  currentUserId,
   canStartCall = true,
   isAdmin,
   members,
