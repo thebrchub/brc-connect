@@ -27,19 +27,14 @@ interface ReceiptInfo {
   status: string; // "read" | "delivered"
 }
 
-/** roomId → Map<userId, timestamp_ms> */
-type ReadMap = Map<string, Map<string, number>>;
-
-/** Tracks an active group call in a room */
 export interface GroupCallInfo {
   roomId: string;
   initiatedBy: string;
   participants: Set<string>;
-  startedAt?: number; // epoch ms — used for elapsed timer
-  warningRemainingSec?: number; // set when server sends group_call_warning
+  startedAt?: number; 
+  warningRemainingSec?: number; 
 }
 
-/** Active 1:1 call state */
 export type PeerCallState = "idle" | "ringing_out" | "ringing_in" | "connected";
 
 export interface PeerCallInfo {
@@ -48,10 +43,9 @@ export interface PeerCallInfo {
   peerName?: string;
   hasVideo: boolean;
   state: PeerCallState;
-  startedAt?: number; // Date.now() when connected
+  startedAt?: number; 
 }
 
-/** Incoming call signal event */
 export interface CallSignalEvent {
   type: string;
   callId: string;
@@ -65,41 +59,30 @@ export interface CallSignalEvent {
 interface ChatContextValue {
   ws: ChatWS | null;
   connState: ConnState;
-  /** Messages received in real-time (keyed by roomId) */
   realtimeMessages: Map<string, Message[]>;
-  /** Typing indicators (roomId → userIds) */
   typingUsers: Map<string, Set<string>>;
-  /** Per-room read timestamps: roomId → Map<userId, ts_ms> */
   roomReadAt: ReadMap;
-  /** Send a chat message, returns temp ID */
   sendMessage: (roomId: string, text: string, replyTo?: string, mediaUrl?: string, mediaType?: string) => string;
-  /** Send typing start indicator */
   sendTyping: (roomId: string) => void;
-  /** Clear realtime messages for a room (after fetch merges them) */
   clearRealtimeMessages: (roomId: string) => void;
-  /** Seed read timestamps from fetched member data */
   seedReadAt: (roomId: string, entries: { userId: string; ts: number }[]) => void;
-  /** Timestamp (ms) when each room was last opened by the user */
   roomOpenedAt: Map<string, number>;
-  /** Record that a room was opened now */
   markRoomOpened: (roomId: string) => void;
-  /** Active group calls: roomId → GroupCallInfo */
   activeGroupCalls: Map<string, GroupCallInfo>;
-  /** Active 1:1 peer call */
   peerCall: PeerCallInfo | null;
-  /** Clear the peer call state (used by useCall on reject/accept/hangup) */
   clearPeerCall: () => void;
-  /** Update peer call state (e.g. ringing_in → connected) */
   updatePeerCallState: (state: PeerCallState) => void;
-  /** Last incoming call signal (for WebRTC negotiation) */
   lastCallSignal: CallSignalEvent | null;
-  /** Total unread badge count across all rooms (for sidebar icon) */
   unreadBadgeCount: number;
-  /** Whether there's an incoming call ringing (for sidebar icon) */
   hasIncomingCall: boolean;
-  /** Set of currently online user IDs (from presence events) */
   onlineUsers: Set<string>;
+  
+  // ── Global State Persistence ──
+  activeRoomId: string | null;
+  setActiveRoomId: (id: string | null) => void;
 }
+
+type ReadMap = Map<string, Map<string, number>>;
 
 const ChatContext = createContext<ChatContextValue>({
   ws: null,
@@ -121,6 +104,8 @@ const ChatContext = createContext<ChatContextValue>({
   unreadBadgeCount: 0,
   hasIncomingCall: false,
   onlineUsers: new Set(),
+  activeRoomId: null,
+  setActiveRoomId: () => {},
 });
 
 export function useChatContext() {
@@ -150,7 +135,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const qc = useQueryClient();
 
-  // ── Unread badge + browser notifications ──────────────────────────
+  // ── Global Active Room Persistence ──
+  const [activeRoomId, _setActiveRoomId] = useState<string | null>(() => sessionStorage.getItem("activeChatRoomId"));
+  const activeRoomIdRef = useRef<string | null>(activeRoomId);
+
+  const setActiveRoomId = useCallback((id: string | null) => {
+    if (id) sessionStorage.setItem("activeChatRoomId", id);
+    else sessionStorage.removeItem("activeChatRoomId");
+    activeRoomIdRef.current = id;
+    _setActiveRoomId(id);
+  }, []);
+
+  // ── Unread badge + browser notifications ──
   const [unreadBadgeCount, setUnreadBadgeCount] = useState(0);
   const originalTitle = useRef(document.title);
   const flashTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -171,7 +167,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setUnreadBadgeCount(count);
   }, [realtimeMessages, roomOpenedAt, currentUserId]);
 
-  // Tab title flash when there are unreads or incoming call
   const hasIncomingCall = peerCall?.state === "ringing_in";
 
   useEffect(() => {
@@ -199,7 +194,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // Dynamic favicon badge overlay
   useEffect(() => {
-    // Capture original favicon on first run
     if (!originalFavicon.current) {
       const link = document.querySelector<HTMLLinkElement>("link[rel*='icon']");
       originalFavicon.current = link?.href || "/favicon.ico";
@@ -212,7 +206,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     const needsBadge = unreadBadgeCount > 0 || hasIncomingCall;
     if (!needsBadge) {
-      // Restore original favicon
       setFavicon(originalFavicon.current);
       return;
     }
@@ -225,8 +218,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       ctx.clearRect(0, 0, 64, 64);
       ctx.drawImage(img, 0, 0, 64, 64);
 
-      // Draw badge circle
-      const badgeColor = hasIncomingCall ? "#22c55e" : "#f97316"; // green for call, orange for messages
+      const badgeColor = hasIncomingCall ? "#22c55e" : "#f97316"; 
       const radius = hasIncomingCall ? 12 : (unreadBadgeCount > 9 ? 16 : 12);
       const cx = 64 - radius;
       const cy = radius;
@@ -259,34 +251,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     };
   }, [unreadBadgeCount, hasIncomingCall]);
 
-  // Notification sound on new message from others
+  // Pre-load notification sound
   useEffect(() => {
     if (!notifAudio.current) {
-      notifAudio.current = new Audio("/notif.mp3");
-      notifAudio.current.volume = 0.3;
+      notifAudio.current = new Audio("/message.mp3");
+      notifAudio.current.volume = 0.5;
     }
   }, []);
 
-  const prevMsgCount = useRef(0);
-  useEffect(() => {
-    let total = 0;
-    for (const msgs of realtimeMessages.values()) total += msgs.length;
-    if (total > prevMsgCount.current && prevMsgCount.current > 0) {
-      // New message arrived — play sound if from someone else
-      const lastRoom = Array.from(realtimeMessages.entries()).find(
-        ([, msgs]) => msgs.length > 0 && msgs[msgs.length - 1].sender_id !== currentUserId
-      );
-      if (lastRoom) {
-        notifAudio.current?.play().catch(() => {});
-      }
-    }
-    prevMsgCount.current = total;
-  }, [realtimeMessages, currentUserId]);
-
-  // Typing debounce timers
   const typingTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  // Seed active group calls from REST API on mount (survives refresh)
   useEffect(() => {
     const API_URL = import.meta.env.VITE_API_URL || "https://connect-api.brchub.tech";
     const token = getToken();
@@ -314,7 +288,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           return next;
         });
       })
-      .catch(() => {}); // silent — non-critical
+      .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
@@ -326,22 +300,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     ws.on("chat_message", (msg: unknown) => {
       const m = msg as Message;
+      
+      // ── New Message Sound Logic ──
+      if (m.sender_id !== currentUserId) {
+        // Check if the user is actively viewing this specific chat room and the browser tab is focused
+        const isActivelyViewingChat = m.room_id === activeRoomIdRef.current && document.visibilityState === "visible";
+        
+        // If they are not actively reading it, ping the notification!
+        if (!isActivelyViewingChat) {
+          notifAudio.current?.play().catch(() => {});
+        }
+      }
+
       setRealtimeMessages((prev) => {
         const next = new Map(prev);
         const arr = next.get(m.room_id) ?? [];
-        // Dedupe by ID
         if (!arr.find((x) => x.id === m.id)) {
           next.set(m.room_id, [...arr, m]);
         }
         return next;
       });
-      // Update room list in-place: patch last_message + bump to top
+
       qc.setQueriesData<{
         pages: { rooms: RoomListItem[]; next_cursor: string }[];
         pageParams: string[];
       }>({ queryKey: ["chat-rooms"] }, (old) => {
         if (!old) return old;
-        // Remove the room from wherever it is
         let found: RoomListItem | undefined;
         const pages = old.pages.map((page) => ({
           ...page,
@@ -353,7 +337,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             return true;
           }),
         }));
-        // Patch and prepend to first page
         const updated: RoomListItem = {
           ...(found ?? { id: m.room_id, type: "dm" as const, unread_count: 0, updated_at: "" }),
           last_message: m,
@@ -373,7 +356,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         next.set(t.roomId, set);
         return next;
       });
-      // Auto-clear typing after 4s
       const key = `${t.roomId}:${t.userId}`;
       if (typingTimers.current.has(key)) clearTimeout(typingTimers.current.get(key));
       typingTimers.current.set(
@@ -420,9 +402,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     ws.on("message_edit", (data: unknown) => {
       const edit = data as WireMessageEdit;
-      // Invalidate messages for all rooms (we don't know which room from edit alone)
       qc.invalidateQueries({ queryKey: ["chat-messages"] });
-      // Also update any realtime messages
       setRealtimeMessages((prev) => {
         const next = new Map(prev);
         for (const [roomId, msgs] of next) {
@@ -443,7 +423,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     ws.on("send_confirm", (data: unknown) => {
       const confirm = data as WireSendConfirm;
-      // Replace temp ID with permanent ID in realtime messages
       setRealtimeMessages((prev) => {
         const next = new Map(prev);
         for (const [roomId, msgs] of next) {
@@ -487,7 +466,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               p.add(ev.userId);
               next.set(rid, { ...info, participants: p });
             } else {
-              // Joined but we missed the start — create entry
               next.set(rid, {
                 roomId: rid,
                 initiatedBy: ev.initiatedBy || ev.userId,
@@ -529,7 +507,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       switch (ev.type) {
         case MsgType.CALL_RING:
-          // Incoming call
           setPeerCall({
             callId: ev.callId,
             peerId: ev.from,
@@ -538,7 +515,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           });
           break;
         case MsgType.CALL_ACCEPT:
-          // Other side accepted our outgoing call
           setPeerCall((prev) =>
             prev?.callId === ev.callId ? { ...prev, state: "connected", startedAt: Date.now() } : prev
           );
@@ -547,10 +523,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         case MsgType.CALL_END:
         case MsgType.CALL_MISSED:
         case MsgType.CALL_BUSY:
-          // Call ended / rejected / busy / missed
           setPeerCall((prev) => (prev?.callId === ev.callId ? null : prev));
           break;
-        // CALL_OFFER, CALL_ANSWER, CALL_ICE are handled by useCall hook via lastCallSignal
       }
     });
 
@@ -636,6 +610,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         unreadBadgeCount,
         hasIncomingCall,
         onlineUsers,
+        activeRoomId,
+        setActiveRoomId,
       }}
     >
       {children}

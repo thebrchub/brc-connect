@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo, useState } from "react";
-import { Check, CheckCheck, Pencil, Trash2, Reply, Download, FileText, Play, X } from "lucide-react";
+import { Check, CheckCheck, Pencil, Trash2, Reply, Download, FileText, X, AlertTriangle } from "lucide-react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import type { Message } from "./types";
@@ -56,6 +56,9 @@ export default function MessageList({
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLenRef = useRef(0);
 
+  // Custom Delete Modal State
+  const [msgToDelete, setMsgToDelete] = useState<Message | null>(null);
+
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (messages.length > prevLenRef.current) {
@@ -107,181 +110,221 @@ export default function MessageList({
   }
 
   return (
-    <div
-      ref={scrollRef}
-      onScroll={handleScroll}
-      className="flex-1 overflow-y-auto px-4 py-3 space-y-1"
-    >
-      {/* Load more indicator */}
-      {loadingMore && (
-        <div className="flex justify-center py-3">
-          <div className="w-5 h-5 border-2 border-zinc-600 border-t-accent-start rounded-full animate-spin" />
-        </div>
-      )}
-      {hasMore && !loadingMore && (
-        <button
-          onClick={onLoadMore}
-          className="w-full text-center py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-        >
-          Load earlier messages
-        </button>
-      )}
-
-      {grouped.map((group) => (
-        <div key={group.date}>
-          {/* Date separator */}
-          <div className="flex items-center gap-3 py-3">
-            <div className="flex-1 h-px bg-white/5" />
-            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
-              {formatDateGroup(group.date)}
-            </span>
-            <div className="flex-1 h-px bg-white/5" />
+    <>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-1"
+      >
+        {/* Load more indicator */}
+        {loadingMore && (
+          <div className="flex justify-center py-3">
+            <div className="w-5 h-5 border-2 border-zinc-600 border-t-accent-start rounded-full animate-spin" />
           </div>
+        )}
+        {hasMore && !loadingMore && (
+          <button
+            onClick={onLoadMore}
+            className="w-full text-center py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            Load earlier messages
+          </button>
+        )}
 
-          {/* Messages */}
-          {group.messages.map((msg, i) => {
-            const isMine = msg.sender_id === currentUserId;
-            const isDeleted = !!msg.deleted_at;
-            const prevMsg = i > 0 ? group.messages[i - 1] : null;
-            const showSender = !isMine && msg.sender_id !== prevMsg?.sender_id;
-            const replyTarget = msg.reply_to ? msgMap.get(msg.reply_to) : null;
+        {grouped.map((group) => (
+          <div key={group.date}>
+            {/* Date separator */}
+            <div className="flex items-center gap-3 py-3">
+              <div className="flex-1 h-px bg-white/5" />
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                {formatDateGroup(group.date)}
+              </span>
+              <div className="flex-1 h-px bg-white/5" />
+            </div>
 
-            return (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.15 }}
-                className={`flex ${isMine ? "justify-end" : "justify-start"} group ${
-                  showSender ? "mt-3" : "mt-0.5"
-                }`}
-              >
-                {/* Sender avatar (group only, other's messages) */}
-                {isGroup && !isMine && (
-                  <div className="w-7 shrink-0 mr-2 self-end">
-                    {showSender && (
-                      <Avatar name={msg.sender_name || "?"} avatarKey={msg.sender_avatar_url} size="sm" className="w-7 h-7 text-[10px]" />
-                    )}
-                  </div>
-                )}
-                <div className={`relative max-w-[75%] ${isMine ? "items-end" : "items-start"}`}>
-                  {/* Sender name */}
-                  {showSender && msg.sender_name && (
-                    <p className="text-[10px] text-zinc-500 font-bold mb-1 ml-1">
-                      {msg.sender_name}
-                    </p>
-                  )}
+            {/* Messages */}
+            {group.messages.map((msg, i) => {
+              const isMine = msg.sender_id === currentUserId;
+              const isDeleted = !!msg.deleted_at;
+              const prevMsg = i > 0 ? group.messages[i - 1] : null;
+              const showSender = !isMine && msg.sender_id !== prevMsg?.sender_id;
+              const replyTarget = msg.reply_to ? msgMap.get(msg.reply_to) : null;
 
-                  {/* Reply preview */}
-                  {replyTarget && (
-                    <div
-                      className={`mb-1 px-3 py-1.5 rounded-lg border-l-2 text-[11px] ${
-                        isMine
-                          ? "bg-white/[0.03] border-accent-start/40 text-zinc-400"
-                          : "bg-white/[0.02] border-zinc-500/40 text-zinc-400"
-                      }`}
-                    >
-                      <span className="font-semibold text-zinc-300">
-                        {replyTarget.sender_name || "Unknown"}
-                      </span>
-                      <p className="truncate mt-0.5">
-                        {replyTarget.deleted_at ? "Message deleted" : replyTarget.content}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Bubble */}
-                  <div
-                    className={`rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
-                      isDeleted
-                        ? "bg-white/[0.02] text-zinc-600 italic border border-white/5"
-                        : isMine
-                          ? "bg-accent-start/15 text-white border border-accent-start/10"
-                          : "bg-white/[0.05] text-zinc-200 border border-white/5"
-                    }`}
-                  >
-                    {isDeleted ? (
-                      <span className="text-xs">This message was deleted</span>
-                    ) : (
-                      <>
-                        {msg.media_url && (() => {
-                          const [fn, ...rest] = (msg.content || "").split("\n");
-                          const caption = rest.join("\n");
-                          return (
-                            <>
-                              <MediaPreview url={msg.media_url} type={msg.media_type} fileName={fn} />
-                              {caption && <p className="whitespace-pre-wrap break-words text-sm mt-1">{caption}</p>}
-                            </>
-                          );
-                        })()}
-                        {msg.content && !msg.media_url && (
-                          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                        )}
-                      </>
-                    )}
-                    <div
-                      className={`flex items-center gap-1.5 mt-1 ${
-                        isMine ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      <span className="text-[10px] text-zinc-600">
-                        {formatTime(msg.created_at)}
-                      </span>
-                      {msg.edited_at && !isDeleted && (
-                        <span className="text-[10px] text-zinc-600">edited</span>
+              return (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className={`flex ${isMine ? "justify-end" : "justify-start"} group ${
+                    showSender ? "mt-3" : "mt-0.5"
+                  }`}
+                >
+                  {/* Sender avatar (group only, other's messages) */}
+                  {isGroup && !isMine && (
+                    <div className="w-7 shrink-0 mr-2 self-end">
+                      {showSender && (
+                        <Avatar name={msg.sender_name || "?"} avatarKey={msg.sender_avatar_url} size="sm" className="w-7 h-7 text-[10px]" />
                       )}
-                      {isMine && !isDeleted && (() => {
-                        const msgTs = new Date(msg.created_at).getTime();
-                        const isRead = otherReadAtMs != null && otherReadAtMs >= msgTs;
-                        return isRead
-                          ? <CheckCheck size={12} className="text-blue-400" />
-                          : <Check size={12} className="text-zinc-500" />;
-                      })()}
                     </div>
-                  </div>
+                  )}
+                  <div className={`relative max-w-[75%] ${isMine ? "items-end" : "items-start"}`}>
+                    {/* Sender name */}
+                    {showSender && msg.sender_name && (
+                      <p className="text-[10px] text-zinc-500 font-bold mb-1 ml-1">
+                        {msg.sender_name}
+                      </p>
+                    )}
 
-                  {/* Action buttons (visible on hover) */}
-                  {!isDeleted && (
-                    <div
-                      className={`absolute top-0 ${
-                        isMine ? "left-0 -translate-x-full pr-1" : "right-0 translate-x-full pl-1"
-                      } hidden group-hover:flex items-center gap-0.5`}
-                    >
-                      <button
-                        onClick={() => onReply(msg)}
-                        className="p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-white/5 transition-colors"
-                        title="Reply"
+                    {/* Reply preview */}
+                    {replyTarget && (
+                      <div
+                        className={`mb-1 px-3 py-1.5 rounded-lg border-l-2 text-[11px] ${
+                          isMine
+                            ? "bg-white/[0.03] border-accent-start/40 text-zinc-400"
+                            : "bg-white/[0.02] border-zinc-500/40 text-zinc-400"
+                        }`}
                       >
-                        <Reply size={13} />
-                      </button>
-                      {isMine && (
+                        <span className="font-semibold text-zinc-300">
+                          {replyTarget.sender_name || "Unknown"}
+                        </span>
+                        <p className="truncate mt-0.5">
+                          {replyTarget.deleted_at ? "Message deleted" : replyTarget.content}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Bubble */}
+                    <div
+                      className={`rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+                        isDeleted
+                          ? "bg-white/[0.02] text-zinc-600 italic border border-white/5"
+                          : isMine
+                            ? "bg-accent-start/15 text-white border border-accent-start/10"
+                            : "bg-white/[0.05] text-zinc-200 border border-white/5"
+                      }`}
+                    >
+                      {isDeleted ? (
+                        <span className="text-xs">This message was deleted</span>
+                      ) : (
                         <>
-                          <button
-                            onClick={() => onEdit(msg)}
-                            className="p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-white/5 transition-colors"
-                            title="Edit"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                          <button
-                            onClick={() => onDelete(msg)}
-                            className="p-1 rounded text-zinc-600 hover:text-red-400 hover:bg-white/5 transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {msg.media_url && (() => {
+                            const [fn, ...rest] = (msg.content || "").split("\n");
+                            const caption = rest.join("\n");
+                            return (
+                              <>
+                                <MediaPreview url={msg.media_url} type={msg.media_type} fileName={fn} />
+                                {caption && <p className="whitespace-pre-wrap break-words text-sm mt-1">{caption}</p>}
+                              </>
+                            );
+                          })()}
+                          {msg.content && !msg.media_url && (
+                            <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                          )}
                         </>
                       )}
+                      <div
+                        className={`flex items-center gap-1.5 mt-1 ${
+                          isMine ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        <span className="text-[10px] text-zinc-600">
+                          {formatTime(msg.created_at)}
+                        </span>
+                        {msg.edited_at && !isDeleted && (
+                          <span className="text-[10px] text-zinc-600">edited</span>
+                        )}
+                        {isMine && !isDeleted && (() => {
+                          const msgTs = new Date(msg.created_at).getTime();
+                          const isRead = otherReadAtMs != null && otherReadAtMs >= msgTs;
+                          return isRead
+                            ? <CheckCheck size={12} className="text-blue-400" />
+                            : <Check size={12} className="text-zinc-500" />;
+                        })()}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      ))}
-      <div ref={bottomRef} />
-    </div>
+
+                    {/* Action buttons (visible on hover) */}
+                    {!isDeleted && (
+                      <div
+                        className={`absolute top-0 ${
+                          isMine ? "left-0 -translate-x-full pr-1" : "right-0 translate-x-full pl-1"
+                        } hidden group-hover:flex items-center gap-0.5 z-10`}
+                      >
+                        <button
+                          onClick={() => onReply(msg)}
+                          className="p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-white/5 transition-colors"
+                          title="Reply"
+                        >
+                          <Reply size={13} />
+                        </button>
+                        {isMine && (
+                          <>
+                            <button
+                              onClick={() => onEdit(msg)}
+                              className="p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-white/5 transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil size={13} />
+                            </button>
+                            <button
+                              // OPEN CUSTOM MODAL INSTEAD OF DIRECT DELETE
+                              onClick={() => setMsgToDelete(msg)}
+                              className="p-1 rounded text-zinc-600 hover:text-red-400 hover:bg-white/5 transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* ── Custom Delete Confirmation Modal ── */}
+      {msgToDelete && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
+          <div className="bg-[#09090b] border border-white/10 rounded-3xl p-6 shadow-2xl max-w-sm w-full animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-4 mb-4 text-red-400">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+                <AlertTriangle size={24} />
+              </div>
+              <h3 className="text-xl font-bold text-white">Delete Message?</h3>
+            </div>
+            
+            <p className="text-sm text-zinc-400 mb-8 leading-relaxed">
+              Are you sure you want to delete this message? This action will permanently remove it from <strong className="text-white">both sides</strong> of the conversation and cannot be undone.
+            </p>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setMsgToDelete(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onDelete(msgToDelete);
+                  setMsgToDelete(null);
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold transition-colors shadow-[0_4px_10px_rgba(239,68,68,0.3)]"
+              >
+                Delete for Everyone
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
 

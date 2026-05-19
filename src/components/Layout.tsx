@@ -4,7 +4,6 @@ import {
   Megaphone,
   Users,
   BarChart3,
-  LogOut,
   Menu,
   X,
   BookOpen,
@@ -15,9 +14,9 @@ import {
   UserCog,
   Globe,
   MessageCircle,
+  User
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { useAuth } from "../hooks/useAuth";
 import { getUserRole } from "../hooks/useRole";
 import Tooltip from "./Tooltip";
 import { useChatContext } from "../chat/ChatContext";
@@ -65,7 +64,6 @@ export default function Layout() {
 }
 
 function LayoutInner() {
-  const { logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [manualCollapsed, setManualCollapsed] = useState(false);
   const role = getUserRole();
@@ -103,6 +101,20 @@ function LayoutInner() {
     if (role === "super_admin") return SUPER_ADMIN_NAV;
     return ADMIN_NAV;
   }, [role]);
+
+  // Dynamically build the mobile bottom navigation based on role
+  const bottomNavItems = useMemo(() => {
+    let items = NAV.slice(0, 5);
+    // Replace "Overview" with "Profile" only for employees in the bottom nav
+    if (role === "employee") {
+      items = items.map((item) =>
+        item.to === "/about"
+          ? { to: "/profile", icon: User, label: "Profile" }
+          : item
+      );
+    }
+    return items;
+  }, [NAV, role]);
 
   return (
     <div
@@ -147,17 +159,21 @@ function LayoutInner() {
               key={item.to}
               to={item.to}
               end={item.to === "/"}
-              className={({ isActive }) =>
-                `relative flex items-center rounded-xl text-sm font-bold transition-all duration-200 group ${
+              className={({ isActive }) => {
+                // UI Magic: Detect if this is the Chat tab and it has unread messages
+                const hasUnread = item.to === "/chat" && unreadBadgeCount > 0;
+                
+                return `relative flex items-center rounded-xl text-sm font-bold transition-all duration-200 group ${
                   isCollapsed ? "justify-center p-2.5" : "px-4 py-3 gap-3.5"
                 } ${
                   isActive
-                    // Active: Deeply recessed carved track
                     ? "bg-[#000000] border border-white/5 shadow-[inset_0_2px_10px_rgba(0,0,0,1),inset_0_0_4px_rgba(0,0,0,1)] text-accent-start" 
-                    // Inactive: Flat, pops out on hover
+                    : hasUnread
+                    // Highlighted State: Subtle glowing green tab if unread messages exist
+                    ? "bg-accent-start/10 border border-accent-start/20 text-accent-start shadow-[0_0_15px_rgba(52,211,153,0.1)]"
                     : "border border-transparent text-zinc-400 hover:text-white hover:bg-[#09090b] hover:border-white/5 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_8px_rgba(0,0,0,0.4)]"
-                }`
-              }
+                }`;
+              }}
             >
               <div className="relative shrink-0">
                 <item.icon size={20} className="transition-transform duration-200 group-hover:scale-110" />
@@ -175,7 +191,6 @@ function LayoutInner() {
               </div>
               {!isCollapsed && <span className="truncate">{item.label}</span>}
               
-              {/* Skeuomorphic Floating Tooltip */}
               {isCollapsed && (
                 <Tooltip label={item.label} side="right" />
               )}
@@ -183,10 +198,9 @@ function LayoutInner() {
           ))}
         </nav>
 
-        {/* External Website & Logout Section */}
+        {/* External Website & Profile Section */}
         <div className="p-3 border-t border-white/5 bg-[#000000] shadow-[inset_0_4px_10px_rgba(0,0,0,0.5)] space-y-2">
           
-          {/* Added Website Link */}
           <a
             href="https://www.brchub.tech"
             target="_blank"
@@ -202,33 +216,20 @@ function LayoutInner() {
             )}
           </a>
 
-          {/* Profile Link */}
           <NavLink
             to="/profile"
             className={({ isActive }) =>
               `relative flex items-center w-full rounded-xl text-sm font-bold transition-all duration-200 group border border-transparent ${
                 isActive
-                  ? "text-accent-start bg-accent-start/10 border-accent-start/20"
-                  : "text-zinc-500 hover:text-white hover:bg-[#09090b] hover:border-white/5"
+                  ? "bg-[#000000] border border-white/5 shadow-[inset_0_2px_10px_rgba(0,0,0,1),inset_0_0_4px_rgba(0,0,0,1)] text-accent-start"
+                  : "border border-transparent text-zinc-400 hover:text-white hover:bg-[#09090b] hover:border-white/5 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_8px_rgba(0,0,0,0.4)]"
               } ${isCollapsed ? "justify-center p-2.5" : "px-4 py-3 gap-3.5"}`
             }
           >
-            <Avatar name={profile?.name || "P"} avatarKey={profile?.avatar_url} size="sm" className="w-5 h-5 text-[10px]" />
-            {!isCollapsed && <span>Profile</span>}
+            <User size={20} className="shrink-0 transition-transform duration-200 group-hover:scale-110" />
+            {!isCollapsed && <span className="truncate">Profile</span>}
             {isCollapsed && <Tooltip label="Profile" side="right" />}
           </NavLink>
-          <button
-            onClick={logout}
-            className={`relative flex items-center w-full rounded-xl text-sm font-bold transition-all duration-200 group border border-transparent text-zinc-500 hover:text-red-400 hover:bg-[#09090b] hover:border-white/5 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_8px_rgba(0,0,0,0.4)] ${
-              isCollapsed ? "justify-center p-2.5" : "px-4 py-3 gap-3.5"
-            }`}
-          >
-            <LogOut size={20} className="shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5" />
-            {!isCollapsed && <span>Logout</span>}
-            {isCollapsed && (
-              <Tooltip label="Logout" side="right" tone="danger" />
-            )}
-          </button>
         </div>
       </aside>
 
@@ -245,7 +246,6 @@ function LayoutInner() {
              </h1>
           </div>
         </div>
-        {/* Mobile Protruding Menu Button */}
         <button 
           onClick={() => setMobileOpen(!mobileOpen)} 
           className="w-10 h-10 rounded-xl bg-[#09090b] border border-white/5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_2px_8px_rgba(0,0,0,0.6)] flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#121214] transition-all active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] active:bg-black"
@@ -260,13 +260,11 @@ function LayoutInner() {
           mobileOpen ? "opacity-100 visible pointer-events-auto" : "opacity-0 invisible pointer-events-none"
         }`}
       >
-        {/* Dark blurred backdrop (clickable to close) */}
         <div 
           className="absolute inset-0 bg-black/90 backdrop-blur-md"
           onClick={() => setMobileOpen(false)}
         />
         
-        {/* Sliding Sidebar Panel - Mobile */}
         <aside
           className={`absolute left-0 top-16 bottom-0 w-64 bg-[#050505] border-r border-white/5 shadow-[20px_0_40px_rgba(0,0,0,0.9)] flex flex-col pb-20 transition-transform duration-300 ease-out ${
             mobileOpen ? "translate-x-0" : "-translate-x-full"
@@ -280,13 +278,16 @@ function LayoutInner() {
                 to={item.to}
                 end={item.to === "/"}
                 onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${
+                className={({ isActive }) => {
+                  const hasUnread = item.to === "/chat" && unreadBadgeCount > 0;
+                  return `flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-bold transition-all ${
                     isActive
                       ? "bg-[#000000] border border-white/5 shadow-[inset_0_2px_10px_rgba(0,0,0,1),inset_0_0_4px_rgba(0,0,0,1)] text-accent-start"
+                      : hasUnread
+                      ? "bg-accent-start/10 border border-accent-start/20 text-accent-start shadow-[0_0_15px_rgba(52,211,153,0.1)]"
                       : "border border-transparent text-zinc-400 hover:text-white hover:bg-[#09090b] hover:border-white/5 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_8px_rgba(0,0,0,0.4)]"
-                  }`
-                }
+                  }`;
+                }}
               >
                 <div className="relative">
                   <item.icon size={20} />
@@ -308,7 +309,6 @@ function LayoutInner() {
           </nav>
 
           <div className="p-4 border-t border-white/5 bg-[#000000] shadow-[inset_0_4px_10px_rgba(0,0,0,0.5)] space-y-2">
-            {/* Added Website Link for Mobile */}
             <a
               href="https://www.brchub.tech"
               target="_blank"
@@ -319,14 +319,20 @@ function LayoutInner() {
               BRC Hub Website
             </a>
 
-            {/* Original Mobile Logout Button */}
-            <button
-              onClick={logout}
-              className="flex items-center gap-4 w-full px-4 py-3.5 rounded-xl border border-transparent text-sm font-bold text-zinc-500 hover:text-red-400 hover:bg-[#09090b] hover:border-white/5 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_8px_rgba(0,0,0,0.4)] transition-all"
+            <NavLink
+              to="/profile"
+              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-4 w-full px-4 py-3.5 rounded-xl border border-transparent text-sm font-bold transition-all ${
+                  isActive
+                    ? "bg-[#000000] border border-white/5 shadow-[inset_0_2px_10px_rgba(0,0,0,1),inset_0_0_4px_rgba(0,0,0,1)] text-accent-start"
+                    : "text-zinc-400 hover:text-white hover:bg-[#09090b] hover:border-white/5 hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_4px_8px_rgba(0,0,0,0.4)]"
+                }`
+              }
             >
-              <LogOut size={20} />
-              Logout
-            </button>
+              <User size={20} />
+              Profile
+            </NavLink>
           </div>
         </aside>
       </div>
@@ -341,16 +347,22 @@ function LayoutInner() {
 
       {/* Mobile Bottom Nav - Protruding Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex justify-around px-2 pb-safe border-t border-white/5 bg-black/95 backdrop-blur-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.8)]">
-        {NAV.slice(0, 5).map((item) => (
+        {bottomNavItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.to === "/"}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center gap-1.5 py-3 text-[10px] font-extrabold tracking-wide transition-all duration-200 ${
-                isActive ? "text-accent-start -translate-y-1" : "text-zinc-600 hover:text-zinc-300"
-              }`
-            }
+            className={({ isActive }) => {
+              const hasUnread = item.to === "/chat" && unreadBadgeCount > 0;
+              return `flex-1 flex flex-col items-center gap-1.5 py-3 text-[10px] font-extrabold tracking-wide transition-all duration-200 ${
+                isActive 
+                  ? "text-accent-start -translate-y-1" 
+                  : hasUnread
+                  // Glowing green highlight for bottom nav when there's an unread message
+                  ? "text-accent-start drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                  : "text-zinc-600 hover:text-zinc-300"
+              }`;
+            }}
           >
             {({ isActive }) => (
               <>

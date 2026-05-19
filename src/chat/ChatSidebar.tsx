@@ -64,7 +64,10 @@ export default function ChatSidebar({
   const { data: searchData, isLoading: searchLoading } = useSearchMessages(committedSearch);
   const searchResults = searchData?.results ?? [];
 
-  const filtered = useMemo(() => rooms.filter((r) => {
+const filtered = useMemo(() => rooms.filter((r) => {
+    // 🛡️ DEFENSIVE PROGRAMMING: If the room is null/undefined, throw it out immediately!
+    if (!r) return false; 
+
     if (!search) return true;
     const q = search.toLowerCase();
     const name =

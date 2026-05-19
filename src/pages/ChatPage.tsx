@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Users, WifiOff, Loader2, Phone, Video } from "lucide-react";
+import { ArrowLeft, Users, WifiOff, Loader2} from "lucide-react";
 import toast from "react-hot-toast";
 import { getUserId, getUserRole } from "../hooks/useRole";
 import { useChatContext } from "../chat/ChatContext";
@@ -30,7 +30,7 @@ function ChatInner() {
   const userRole = getUserRole();
   const isOrgAdmin = userRole === "admin" || userRole === "super_admin";
   const qc = useQueryClient();
-  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
+ const { activeRoomId, setActiveRoomId } = useChatContext();
   const [showDMModal, setShowDMModal] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -121,7 +121,7 @@ function ChatInner() {
 
   // ── Active room info ──
   const activeRoom: RoomListItem | undefined = rooms.find(
-    (r) => r.id === activeRoomId
+    (r) => r?.id === activeRoomId
   );
   const activeRoomName = activeRoom
     ? activeRoom.type === "dm"
@@ -335,7 +335,7 @@ function ChatInner() {
                   />
                 )}
 
-                {/* 1:1 call buttons in DM header */}
+                {/* 1:1 call buttons in DM header
                 {activeRoom.type === "dm" && activeRoom.other_user_id && p2p.state === "idle" && (
                   <div className="flex items-center gap-1 shrink-0">
                     <button
@@ -353,7 +353,7 @@ function ChatInner() {
                       <Video size={16} />
                     </button>
                   </div>
-                )}
+                )} */}
               </div>
 
               {/* Group call panel (rendered outside header to avoid stretching it) */}
