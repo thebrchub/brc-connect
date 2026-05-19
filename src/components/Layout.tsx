@@ -21,8 +21,7 @@ import { getUserRole } from "../hooks/useRole";
 import Tooltip from "./Tooltip";
 import { useChatContext } from "../chat/ChatContext";
 import { CallProvider, useCallContext } from "../chat/CallContext";
-import { useContacts, useRooms, useProfile } from "../chat/useChatApi";
-import Avatar from "../chat/Avatar";
+import { useContacts, useRooms } from "../chat/useChatApi";
 import IncomingCallModal from "../chat/IncomingCallModal";
 import CallView from "../chat/CallView";
 
@@ -72,7 +71,6 @@ function LayoutInner() {
   const isCollapsed = isChat || manualCollapsed;
   const { unreadBadgeCount, hasIncomingCall } = useChatContext();
   const p2p = useCallContext();
-  const { data: profile } = useProfile();
   const { data: contacts = [] } = useContacts();
   const { data: roomPages } = useRooms();
   const rooms = useMemo(() => roomPages?.pages.flatMap((p) => p.rooms) ?? [], [roomPages]);
