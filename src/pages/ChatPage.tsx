@@ -329,7 +329,7 @@ function ChatInner() {
                     roomType={activeRoom.type}
                     activeCall={undefined}
                     currentUserId={currentUserId}
-                    canStartCall={isOrgAdmin}
+                    canStartCall={false}
                     isAdmin={members?.some(
                       (m) => m.user_id === currentUserId && m.role === "admin"
                     ) ?? false}
@@ -365,7 +365,7 @@ function ChatInner() {
                   roomType={activeRoom.type}
                   activeCall={activeGroupCalls.get(activeRoomId!)}
                   currentUserId={currentUserId}
-                  canStartCall={isOrgAdmin}
+                  canStartCall={false}
                   isAdmin={members?.some(
                     (m) => m.user_id === currentUserId && m.role === "admin"
                   ) ?? false}
