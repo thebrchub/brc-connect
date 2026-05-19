@@ -70,11 +70,16 @@ export default function MessageList({
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
-    if (messages.length > prevLenRef.current && !isAwayFromBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > prevLenRef.current) {
+      const lastMsg = messages[messages.length - 1];
+      // Always scroll if the new message is from the current user (they just sent it)
+      // or if the user is already near the bottom
+      if (!isAwayFromBottomRef.current || lastMsg?.sender_id === currentUserId) {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
     }
     prevLenRef.current = messages.length;
-  }, [messages.length]);
+  }, [messages.length, messages, currentUserId]);
 
   const setMessageRef = useCallback((id: string, node: HTMLDivElement | null) => {
     if (node) {
@@ -154,6 +159,22 @@ export default function MessageList({
     setShowScrollDown(false);
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const scrollToMessage = useCallback((messageId: string) => {
+    const target = messageRefs.current.get(messageId);
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    if (highlightTimeoutRef.current) {
+      window.clearTimeout(highlightTimeoutRef.current);
+    }
+    setActiveHighlightId(messageId);
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      setActiveHighlightId(null);
+      highlightTimeoutRef.current = null;
+    }, 2000);
+  }, []);
 
   // Find reply target
   const msgMap = useMemo(() => {
@@ -247,7 +268,8 @@ export default function MessageList({
                     {/* Reply preview */}
                     {replyTarget && (
                       <div
-                        className={`mb-1 px-3 py-1.5 rounded-lg border-l-2 text-[11px] ${
+                        onClick={() => scrollToMessage(replyTarget.id)}
+                        className={`mb-1 px-3 py-1.5 rounded-lg border-l-2 text-[11px] cursor-pointer hover:brightness-125 transition-all ${
                           isMine
                             ? "bg-white/[0.03] border-accent-start/40 text-zinc-400"
                             : "bg-white/[0.02] border-zinc-500/40 text-zinc-400"

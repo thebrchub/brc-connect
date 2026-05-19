@@ -11,7 +11,6 @@ import {
   decodeEnvelope,
   decodeChatMessage,
   decodeTypingEvent,
-  decodePresenceEvent,
   decodeReceipt,
   decodeRoomEvent,
   decodeMessageEdit,

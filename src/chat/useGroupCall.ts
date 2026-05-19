@@ -108,7 +108,7 @@ export function useGroupCall(roomId: string) {
 
         lkRoom.on(
           RoomEvent.TrackSubscribed,
-          (track: RemoteTrack, pub: RemoteTrackPublication, participant: RemoteParticipant) => {
+          (track: RemoteTrack, _pub: RemoteTrackPublication, participant: RemoteParticipant) => {
             if (track.kind === Track.Kind.Audio) {
               const el = track.attach();
               el.dataset.participantSid = participant.sid;
@@ -120,7 +120,7 @@ export function useGroupCall(roomId: string) {
 
         lkRoom.on(
           RoomEvent.TrackUnsubscribed,
-          (track: RemoteTrack, pub: RemoteTrackPublication, participant: RemoteParticipant) => {
+          (track: RemoteTrack, _pub: RemoteTrackPublication, _participant: RemoteParticipant) => {
             track.detach().forEach((el) => el.remove());
             syncParticipants();
           }
