@@ -37,6 +37,7 @@ function ChatInner() {
   const [editMsg, setEditMsg] = useState<Message | null>(null);
   const [mobileSidebar, setMobileSidebar] = useState(true);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [targetMessageFocus, setTargetMessageFocus] = useState<{ id: string; key: number } | null>(null);
 
   const { ws, connState, realtimeMessages, roomReadAt, seedReadAt, markRoomOpened, activeGroupCalls, onlineUsers, typingUsers } = useChatContext();
 
@@ -130,11 +131,12 @@ function ChatInner() {
     : "";
 
   // ── Handlers ──
-  const handleSelectRoom = useCallback((id: string) => {
+  const handleSelectRoom = useCallback((id: string, messageId?: string) => {
     // Mark the room we're leaving so messages seen while active don't count as unread
     const prev = activeRoomIdRef.current;
     if (prev && prev !== id) markRoomOpened(prev);
     setActiveRoomId(id);
+    setTargetMessageFocus(messageId ? { id: messageId, key: Date.now() } : null);
     setReplyTo(null);
     setEditMsg(null);
     setMobileSidebar(false);
@@ -143,7 +145,7 @@ function ChatInner() {
     ws?.sendReadReceipt(id);
     // Refresh room list after flusher processes the receipt
     setTimeout(() => qc.invalidateQueries({ queryKey: ["chat-rooms"] }), 3000);
-  }, [ws, qc, markRoomOpened]);
+  }, [ws, qc, markRoomOpened, setActiveRoomId]);
 
   const handleNewDM = useCallback(
     async (userId: string) => {
@@ -156,7 +158,7 @@ function ChatInner() {
         toast.error((e as Error).message || "Failed to create DM");
       }
     },
-    [createDM]
+    [createDM, setActiveRoomId]
   );
 
   const handleNewGroup = useCallback(
@@ -170,7 +172,7 @@ function ChatInner() {
         toast.error((e as Error).message || "Failed to create group");
       }
     },
-    [createGroup]
+    [createGroup, setActiveRoomId]
   );
 
   const handleEdit = useCallback(
@@ -385,6 +387,8 @@ function ChatInner() {
                   onDelete={handleDelete}
                   onReply={(msg) => setReplyTo(msg)}
                   isGroup={activeRoom?.type === "group"}
+                  highlightedMessageId={targetMessageFocus?.id}
+                  highlightRequestKey={targetMessageFocus?.key}
                 />
               )}
 

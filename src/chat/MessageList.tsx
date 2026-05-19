@@ -1,5 +1,5 @@
-import { useEffect, useRef, useMemo, useState } from "react";
-import { Check, CheckCheck, Pencil, Trash2, Reply, Download, FileText, X, AlertTriangle } from "lucide-react";
+import { useCallback, useEffect, useRef, useMemo, useState } from "react";
+import { Check, CheckCheck, Pencil, Trash2, Reply, Download, FileText, X, AlertTriangle, ChevronDown } from "lucide-react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import type { Message } from "./types";
@@ -18,6 +18,8 @@ interface Props {
   hasMore?: boolean;
   loadingMore?: boolean;
   isGroup?: boolean;
+  highlightedMessageId?: string | null;
+  highlightRequestKey?: number;
 }
 
 function formatTime(dateStr: string): string {
@@ -51,21 +53,71 @@ export default function MessageList({
   hasMore,
   loadingMore,
   isGroup,
+  highlightedMessageId,
+  highlightRequestKey,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevLenRef = useRef(0);
+  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const highlightTimeoutRef = useRef<number | null>(null);
+  const isAwayFromBottomRef = useRef(false);
 
   // Custom Delete Modal State
   const [msgToDelete, setMsgToDelete] = useState<Message | null>(null);
+  const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
+  const [showScrollDown, setShowScrollDown] = useState(false);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
-    if (messages.length > prevLenRef.current) {
+    if (messages.length > prevLenRef.current && !isAwayFromBottomRef.current) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
     prevLenRef.current = messages.length;
   }, [messages.length]);
+
+  const setMessageRef = useCallback((id: string, node: HTMLDivElement | null) => {
+    if (node) {
+      messageRefs.current.set(id, node);
+    } else {
+      messageRefs.current.delete(id);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (highlightTimeoutRef.current) {
+      window.clearTimeout(highlightTimeoutRef.current);
+      highlightTimeoutRef.current = null;
+    }
+
+    if (!highlightedMessageId) {
+      highlightTimeoutRef.current = window.setTimeout(() => {
+        setActiveHighlightId(null);
+        highlightTimeoutRef.current = null;
+      }, 0);
+      return;
+    }
+
+    const target = messageRefs.current.get(highlightedMessageId);
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    highlightTimeoutRef.current = window.setTimeout(() => {
+      setActiveHighlightId(highlightedMessageId);
+      highlightTimeoutRef.current = window.setTimeout(() => {
+        setActiveHighlightId(null);
+        highlightTimeoutRef.current = null;
+      }, 2600);
+    }, 0);
+  }, [highlightedMessageId, highlightRequestKey, messages]);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Group messages by date
   const grouped = useMemo(() => {
@@ -84,10 +136,23 @@ export default function MessageList({
 
   // Infinite scroll: load more when scrolled to top
   const handleScroll = () => {
-    if (!scrollRef.current || !hasMore || loadingMore) return;
-    if (scrollRef.current.scrollTop < 60) {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const isAwayFromBottom = distanceFromBottom > 180;
+    isAwayFromBottomRef.current = isAwayFromBottom;
+    setShowScrollDown((prev) => (prev === isAwayFromBottom ? prev : isAwayFromBottom));
+
+    if (hasMore && !loadingMore && el.scrollTop < 60) {
       onLoadMore?.();
     }
+  };
+
+  const scrollToBottom = () => {
+    isAwayFromBottomRef.current = false;
+    setShowScrollDown(false);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   // Find reply target
@@ -111,27 +176,28 @@ export default function MessageList({
 
   return (
     <>
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-1"
-      >
-        {/* Load more indicator */}
-        {loadingMore && (
-          <div className="flex justify-center py-3">
-            <div className="w-5 h-5 border-2 border-zinc-600 border-t-accent-start rounded-full animate-spin" />
-          </div>
-        )}
-        {hasMore && !loadingMore && (
-          <button
-            onClick={onLoadMore}
-            className="w-full text-center py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
-            Load earlier messages
-          </button>
-        )}
+      <div className="relative flex-1 min-h-0">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="h-full overflow-y-auto px-4 py-3 space-y-1"
+        >
+          {/* Load more indicator */}
+          {loadingMore && (
+            <div className="flex justify-center py-3">
+              <div className="w-5 h-5 border-2 border-zinc-600 border-t-accent-start rounded-full animate-spin" />
+            </div>
+          )}
+          {hasMore && !loadingMore && (
+            <button
+              onClick={onLoadMore}
+              className="w-full text-center py-2 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              Load earlier messages
+            </button>
+          )}
 
-        {grouped.map((group) => (
+          {grouped.map((group) => (
           <div key={group.date}>
             {/* Date separator */}
             <div className="flex items-center gap-3 py-3">
@@ -149,10 +215,12 @@ export default function MessageList({
               const prevMsg = i > 0 ? group.messages[i - 1] : null;
               const showSender = !isMine && msg.sender_id !== prevMsg?.sender_id;
               const replyTarget = msg.reply_to ? msgMap.get(msg.reply_to) : null;
+              const isHighlighted = activeHighlightId === msg.id;
 
               return (
                 <motion.div
                   key={msg.id}
+                  ref={(node) => setMessageRef(msg.id, node)}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.15 }}
@@ -202,7 +270,11 @@ export default function MessageList({
                           : isMine
                             ? "bg-accent-start/15 text-white border border-accent-start/10"
                             : "bg-white/[0.05] text-zinc-200 border border-white/5"
-                      }`}
+                      } ${
+                        isHighlighted
+                          ? "ring-2 ring-accent-start/70 shadow-[0_0_24px_rgba(34,211,238,0.22)]"
+                          : "ring-0"
+                      } transition-[box-shadow,ring-color] duration-300`}
                     >
                       {isDeleted ? (
                         <span className="text-xs">This message was deleted</span>
@@ -285,7 +357,19 @@ export default function MessageList({
             })}
           </div>
         ))}
-        <div ref={bottomRef} />
+          <div ref={bottomRef} />
+        </div>
+
+        {showScrollDown && (
+          <button
+            onClick={scrollToBottom}
+            className="absolute bottom-4 right-4 z-20 w-10 h-10 rounded-full bg-[#18181b] border border-white/10 text-white shadow-xl shadow-black/30 flex items-center justify-center hover:bg-zinc-800 hover:border-accent-start/40 transition-all"
+            title="Go to latest messages"
+            aria-label="Go to latest messages"
+          >
+            <ChevronDown size={20} />
+          </button>
+        )}
       </div>
 
       {/* ── Custom Delete Confirmation Modal ── */}

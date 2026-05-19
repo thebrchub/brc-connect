@@ -9,7 +9,7 @@ import CallHistory from "./CallHistory";
 interface Props {
   rooms: RoomListItem[];
   activeRoomId: string | null;
-  onSelectRoom: (id: string) => void;
+  onSelectRoom: (id: string, targetMessageId?: string) => void;
   onNewChat: () => void;
   onNewGroup?: () => void;
   currentUserId: string;
@@ -221,7 +221,7 @@ const filtered = useMemo(() => rooms.filter((r) => {
                   searchResults.map((r) => (
                     <button
                       key={r.id}
-                      onClick={() => { onSelectRoom(r.room_id); setSearch(""); setCommittedSearch(""); }}
+                      onClick={() => { onSelectRoom(r.room_id, r.id); setSearch(""); setCommittedSearch(""); }}
                       className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left border border-transparent hover:bg-white/[0.03] transition-all"
                     >
                       <Avatar name={r.room_name || "?"} size="md" />

@@ -27,7 +27,7 @@ export default function MessageInput({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { sendMessage, sendTyping } = useChatContext();
-  const typingTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Focus input when room changes or reply/edit starts
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function MessageInput({
     if (typingTimeout.current) return;
     sendTyping(roomId);
     typingTimeout.current = setTimeout(() => {
-      typingTimeout.current = undefined;
+      typingTimeout.current = null;
     }, 2000);
   }, [roomId, sendTyping]);
 
