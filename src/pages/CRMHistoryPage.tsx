@@ -241,6 +241,7 @@ const STATUS_OPTIONS = [
   { value: "pending", label: "Pending" },
   { value: "contacted", label: "Contacted" },
   { value: "follow_up", label: "Follow Up" },
+  { value: "revisit_later", label: "Revisit Later" },
   { value: "converted", label: "Converted" },
   { value: "not_interested", label: "Not Interested" },
   { value: "closed", label: "Closed" },
