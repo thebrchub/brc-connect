@@ -5,7 +5,6 @@ let sessionId: string | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
 async function sendHeartbeat() {
-  if (document.hidden) return;
   try {
     const res = await api.post<{ session_id: string }>("/crm/heartbeat", {
       session_id: sessionId,
@@ -22,7 +21,7 @@ export function startHeartbeat() {
   if (role !== "employee") return;
 
   sendHeartbeat();
-  heartbeatInterval = setInterval(sendHeartbeat, 300_000);
+  heartbeatInterval = setInterval(sendHeartbeat, 60_000);
 
   document.addEventListener("visibilitychange", handleVisibility);
 }

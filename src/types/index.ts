@@ -22,7 +22,7 @@ export interface Lead {
   tech_stack: Record<string, string> | null;
   has_ssl: boolean | null;
   is_mobile_friendly: boolean | null;
-  status: "new" | "contacted" | "qualified" | "converted" | "closed";
+  status: "new" | "contacted" | "qualified" | "follow_up" | "revisit_later" | "converted" | "not_interested" | "closed";
   assigned_to?: string | null;
   assigned_to_name?: string | null;
   created_at: string;
