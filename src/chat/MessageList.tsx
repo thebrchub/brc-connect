@@ -64,6 +64,7 @@ export default function MessageList({
   const prevLenRef = useRef(0);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const highlightTimeoutRef = useRef<number | null>(null);
+  const handledHighlightRequestRef = useRef<number | null>(null);
   const isAwayFromBottomRef = useRef(false);
 
   // Custom Delete Modal State
@@ -99,6 +100,7 @@ export default function MessageList({
     }
 
     if (!highlightedMessageId) {
+      handledHighlightRequestRef.current = null;
       highlightTimeoutRef.current = window.setTimeout(() => {
         setActiveHighlightId(null);
         highlightTimeoutRef.current = null;
@@ -106,9 +108,13 @@ export default function MessageList({
       return;
     }
 
+    const requestKey = highlightRequestKey ?? 0;
+    if (handledHighlightRequestRef.current === requestKey) return;
+
     const target = messageRefs.current.get(highlightedMessageId);
     if (!target) return;
 
+    handledHighlightRequestRef.current = requestKey;
     target.scrollIntoView({ behavior: "smooth", block: "center" });
     highlightTimeoutRef.current = window.setTimeout(() => {
       setActiveHighlightId(highlightedMessageId);
