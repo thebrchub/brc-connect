@@ -9,11 +9,23 @@ import toast from "react-hot-toast";
 const STATUS_COLORS: Record<string, string> = {
   contacted: "bg-blue-500/20 text-blue-400",
   follow_up: "bg-purple-500/20 text-purple-400",
+  revisit_later: "bg-amber-500/20 text-amber-400",
   interested: "bg-green-500/20 text-green-400",
   converted: "bg-emerald-500/20 text-emerald-400",
   not_interested: "bg-red-500/20 text-red-400",
   closed: "bg-zinc-500/20 text-zinc-400",
 };
+
+const STATUS_FILTER_OPTIONS = [
+  { value: "", label: "All Statuses" },
+  { value: "contacted", label: "Contacted" },
+  { value: "follow_up", label: "Follow Up" },
+  { value: "revisit_later", label: "Revisit Later" },
+  { value: "interested", label: "Interested" },
+  { value: "converted", label: "Converted" },
+  { value: "not_interested", label: "Not Interested" },
+  { value: "closed", label: "Closed" },
+];
 
 export default function CRMHistoryPage() {
   const [leads, setLeads] = useState<LeadActivity[]>([]);
@@ -26,17 +38,21 @@ export default function CRMHistoryPage() {
   
   // Smart local search state (persists across page changes)
   const [searchTerm, setSearchTerm] = useState("");
+  // Status filter
+  const [statusFilter, setStatusFilter] = useState("");
 
   const fetchHistory = useCallback(() => {
     setLoading(true);
-    api.get<PaginatedResponse<LeadActivity>>(`/crm/leads/history?page=${page}&page_size=20`)
+    const params = new URLSearchParams({ page: String(page), page_size: "20" });
+    if (statusFilter) params.set("status", statusFilter);
+    api.get<PaginatedResponse<LeadActivity>>(`/crm/leads/history?${params}`)
       .then((res) => {
         setLeads(res.data || []);
         setTotal(res.meta.total);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, statusFilter]);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
@@ -88,8 +104,17 @@ export default function CRMHistoryPage() {
           <p className="text-zinc-400 text-sm mt-1.5">Leads you've interected with ({total} total)</p>
         </div>
 
-        {/* Local Page Search Input */}
-        <div className="relative w-full sm:w-72 group">
+        {/* Filters Row */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          {/* Status Filter */}
+          <CustomDropdown
+            value={statusFilter}
+            onChange={(val) => { setStatusFilter(val); setPage(1); }}
+            options={STATUS_FILTER_OPTIONS}
+          />
+
+          {/* Local Page Search Input */}
+          <div className="relative w-full sm:w-72 group">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-orange-500 transition-colors" />
           <input
             type="text"
@@ -107,6 +132,7 @@ export default function CRMHistoryPage() {
               <X size={14} />
             </button>
           )}
+        </div>
         </div>
       </div>
 
@@ -215,6 +241,7 @@ const STATUS_OPTIONS = [
   { value: "pending", label: "Pending" },
   { value: "contacted", label: "Contacted" },
   { value: "follow_up", label: "Follow Up" },
+  { value: "revisit_later", label: "Revisit Later" },
   { value: "converted", label: "Converted" },
   { value: "not_interested", label: "Not Interested" },
   { value: "closed", label: "Closed" },

@@ -7,6 +7,8 @@ import {
   Menu,
   X,
   BookOpen,
+  BookMarked,
+  FileText,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -33,6 +35,8 @@ const ADMIN_NAV = [
   { to: "/analytics", icon: BarChart3, label: "Analytics" },
   { to: "/employees", icon: UserCog, label: "Employees" },
   { to: "/chat", icon: MessageCircle, label: "Chat" },
+  { to: "/playbook", icon: BookMarked, label: "Playbook" },
+  { to: "/materials", icon: FileText, label: "Client Kit" },
   { to: "/about", icon: BookOpen, label: "Overview" },
 ];
 
@@ -41,6 +45,8 @@ const EMPLOYEE_NAV = [
   { to: "/crm/leads", icon: ClipboardList, label: "My Leads" },
   { to: "/crm/history", icon: History, label: "History" },
   { to: "/chat", icon: MessageCircle, label: "Chat" },
+  { to: "/playbook", icon: BookMarked, label: "Playbook" },
+  { to: "/materials", icon: FileText, label: "Client Kit" },
   { to: "/about", icon: BookOpen, label: "Overview" },
 ];
 
@@ -51,6 +57,8 @@ const SUPER_ADMIN_NAV = [
   { to: "/analytics", icon: BarChart3, label: "Analytics" },
   { to: "/admins", icon: UserCog, label: "Admins" },
   { to: "/chat", icon: MessageCircle, label: "Chat" },
+  { to: "/playbook", icon: BookMarked, label: "Playbook" },
+  { to: "/materials", icon: FileText, label: "Client Kit" },
   { to: "/about", icon: BookOpen, label: "Overview" },
 ];
 
@@ -102,16 +110,18 @@ function LayoutInner() {
 
   // Dynamically build the mobile bottom navigation based on role
   const bottomNavItems = useMemo(() => {
-    let items = NAV.slice(0, 5);
-    // Replace "Overview" with "Profile" only for employees in the bottom nav
     if (role === "employee") {
-      items = items.map((item) =>
-        item.to === "/about"
-          ? { to: "/profile", icon: User, label: "Profile" }
-          : item
-      );
+      // Explicitly pick the 5 most critical tabs for a sales rep on mobile
+      return [
+        { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+        { to: "/crm/leads", icon: ClipboardList, label: "My Leads" },
+        { to: "/chat", icon: MessageCircle, label: "Chat" },
+        { to: "/playbook", icon: BookMarked, label: "Playbook" },
+        { to: "/profile", icon: User, label: "Profile" }
+      ];
     }
-    return items;
+    // Admins default to their top 5
+    return NAV.slice(0, 5);
   }, [NAV, role]);
 
   return (
@@ -356,7 +366,6 @@ function LayoutInner() {
                 isActive 
                   ? "text-accent-start -translate-y-1" 
                   : hasUnread
-                  // Glowing green highlight for bottom nav when there's an unread message
                   ? "text-accent-start drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"
                   : "text-zinc-600 hover:text-zinc-300"
               }`;
@@ -364,10 +373,17 @@ function LayoutInner() {
           >
             {({ isActive }) => (
               <>
-                <item.icon 
-                  size={20} 
-                  className={isActive ? "drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" : ""} 
-                />
+                <div className="relative">
+                  <item.icon 
+                    size={20} 
+                    className={isActive ? "drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" : ""} 
+                  />
+                  {item.to === "/chat" && !hasIncomingCall && unreadBadgeCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center bg-orange-500 text-white text-[8px] font-black rounded-full border border-black px-0.5">
+                      {unreadBadgeCount > 99 ? "99+" : unreadBadgeCount}
+                    </span>
+                  )}
+                </div>
                 {item.label}
               </>
             )}

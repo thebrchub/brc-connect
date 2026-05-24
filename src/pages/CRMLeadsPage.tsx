@@ -10,6 +10,7 @@ const STATUS_OPTIONS = [
   { value: "pending", label: "Pending", color: "bg-yellow-500/20 text-yellow-400" },
   { value: "contacted", label: "Contacted", color: "bg-blue-500/20 text-blue-400" },
   { value: "follow_up", label: "Follow Up", color: "bg-purple-500/20 text-purple-400" },
+  { value: "revisit_later", label: "Revisit Later", color: "bg-amber-500/20 text-amber-400" },
   { value: "converted", label: "Converted", color: "bg-emerald-500/20 text-emerald-400" },
   { value: "not_interested", label: "Not Interested", color: "bg-red-500/20 text-red-400" },
   { value: "closed", label: "Closed", color: "bg-zinc-500/20 text-zinc-400" },

@@ -95,17 +95,31 @@ function ChatInner() {
   }, [activeRoomId, realtimeMessages, ws, currentUserId, markRoomOpened]);
 
   // ── Compute lowest read-at among other members (all others have read up to this point) ──
+  // Blue tick only shows when ALL other members have read (not just some)
   const otherReadAtMs = useMemo(() => {
     if (!activeRoomId) return null;
     const roomReads = roomReadAt.get(activeRoomId);
     if (!roomReads?.size) return null;
+
+    // Count how many other active members exist in the room
+    const otherMemberCount = members
+      ? members.filter((m) => m.user_id !== currentUserId && m.status === "active").length
+      : 0;
+
+    // Count tracked readers (excluding self) and find the minimum
+    let trackedCount = 0;
     let min: number | null = null;
     for (const [uid, ts] of roomReads) {
       if (uid === currentUserId) continue;
+      trackedCount++;
       if (min === null || ts < min) min = ts;
     }
+
+    // Only return min if ALL other members have sent a read receipt
+    if (otherMemberCount > 0 && trackedCount < otherMemberCount) return null;
+
     return min;
-  }, [activeRoomId, roomReadAt, currentUserId]);
+  }, [activeRoomId, roomReadAt, currentUserId, members]);
 
   // ── Merge fetched + realtime messages ──
   const messages = useMemo(() => {
@@ -130,6 +144,16 @@ function ChatInner() {
       : activeRoom.name || "Group"
     : "";
 
+  // ── Member lookup map for resolving sender names/avatars in group messages ──
+  const memberMap = useMemo(() => {
+    if (!members?.length) return undefined;
+    const map = new Map<string, { name: string; avatar_url: string }>();
+    for (const m of members) {
+      map.set(m.user_id, { name: m.user_name || "", avatar_url: m.user_avatar_url || "" });
+    }
+    return map;
+  }, [members]);
+
   // ── Handlers ──
   const handleSelectRoom = useCallback((id: string, messageId?: string) => {
     // Mark the room we're leaving so messages seen while active don't count as unread
@@ -143,9 +167,15 @@ function ChatInner() {
     setShowGroupInfo(false);
     markRoomOpened(id);
     ws?.sendReadReceipt(id);
-    // Refresh room list after flusher processes the receipt
-    setTimeout(() => qc.invalidateQueries({ queryKey: ["chat-rooms"] }), 3000);
-  }, [ws, qc, markRoomOpened, setActiveRoomId]);
+    // If room is not in loaded pages (e.g. from search results), refetch rooms immediately
+    const roomExists = roomPages?.pages.some((p) => p.rooms.some((r) => r?.id === id));
+    if (!roomExists) {
+      qc.invalidateQueries({ queryKey: ["chat-rooms"] });
+    } else {
+      // Refresh room list after flusher processes the receipt
+      setTimeout(() => qc.invalidateQueries({ queryKey: ["chat-rooms"] }), 3000);
+    }
+  }, [ws, qc, markRoomOpened, setActiveRoomId, roomPages]);
 
   const handleNewDM = useCallback(
     async (userId: string) => {
@@ -256,7 +286,48 @@ function ChatInner() {
             mobileSidebar ? "hidden" : "flex"
           } md:flex flex-1 flex-col min-w-0`}
         >
-          {activeRoomId && activeRoom ? (
+          {activeRoomId && !activeRoom ? (
+            /* Room selected (e.g. from search) but not yet in loaded pages — show messages + input */
+            <div className="flex flex-1 flex-col min-w-0">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-[#0a0a0f]/60">
+                <button
+                  onClick={() => { setMobileSidebar(true); setActiveRoomId(null); }}
+                  className="md:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <ArrowLeft size={18} />
+                </button>
+                <div className="w-9 h-9 rounded-full bg-zinc-800 animate-pulse shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="h-4 w-24 bg-zinc-800 rounded animate-pulse" />
+                </div>
+              </div>
+              {msgsLoading ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-zinc-600 border-t-accent-start rounded-full animate-spin" />
+                </div>
+              ) : (
+                <MessageList
+                  messages={messages}
+                  currentUserId={currentUserId}
+                  otherReadAtMs={otherReadAtMs}
+                  onEdit={(msg) => setEditMsg(msg)}
+                  onDelete={handleDelete}
+                  onReply={(msg) => setReplyTo(msg)}
+                  isGroup={false}
+                  highlightedMessageId={targetMessageFocus?.id}
+                  highlightRequestKey={targetMessageFocus?.key}
+                />
+              )}
+              <MessageInput
+                roomId={activeRoomId}
+                replyTo={replyTo}
+                editMessage={editMsg}
+                onCancelReply={() => setReplyTo(null)}
+                onCancelEdit={() => setEditMsg(null)}
+                onEditSubmit={handleEdit}
+              />
+            </div>
+          ) : activeRoomId && activeRoom ? (
             <>
               {/* Room header */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-[#0a0a0f]/60">
@@ -389,6 +460,7 @@ function ChatInner() {
                   isGroup={activeRoom?.type === "group"}
                   highlightedMessageId={targetMessageFocus?.id}
                   highlightRequestKey={targetMessageFocus?.key}
+                  memberMap={memberMap}
                 />
               )}
 
