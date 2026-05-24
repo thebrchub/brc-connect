@@ -430,6 +430,8 @@ export interface MessageSearchResult {
   sender_name: string;
   sender_avatar_url: string;
   room_name: string;
+  room_avatar_url: string;
+  room_type: "dm" | "group";
 }
 
 export function useSearchMessages(query: string) {
