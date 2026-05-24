@@ -16,6 +16,17 @@ const STATUS_COLORS: Record<string, string> = {
   closed: "bg-zinc-500/20 text-zinc-400",
 };
 
+const STATUS_FILTER_OPTIONS = [
+  { value: "", label: "All Statuses" },
+  { value: "contacted", label: "Contacted" },
+  { value: "follow_up", label: "Follow Up" },
+  { value: "revisit_later", label: "Revisit Later" },
+  { value: "interested", label: "Interested" },
+  { value: "converted", label: "Converted" },
+  { value: "not_interested", label: "Not Interested" },
+  { value: "closed", label: "Closed" },
+];
+
 export default function CRMHistoryPage() {
   const [leads, setLeads] = useState<LeadActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,20 +107,11 @@ export default function CRMHistoryPage() {
         {/* Filters Row */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           {/* Status Filter */}
-          <select
+          <CustomDropdown
             value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            className="bg-zinc-900/80 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 transition-all shadow-sm"
-          >
-            <option value="">All Statuses</option>
-            <option value="contacted">Contacted</option>
-            <option value="follow_up">Follow Up</option>
-            <option value="revisit_later">Revisit Later</option>
-            <option value="interested">Interested</option>
-            <option value="converted">Converted</option>
-            <option value="not_interested">Not Interested</option>
-            <option value="closed">Closed</option>
-          </select>
+            onChange={(val) => { setStatusFilter(val); setPage(1); }}
+            options={STATUS_FILTER_OPTIONS}
+          />
 
           {/* Local Page Search Input */}
           <div className="relative w-full sm:w-72 group">
