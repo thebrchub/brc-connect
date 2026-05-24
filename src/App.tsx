@@ -27,6 +27,8 @@ import ChatPage from "./pages/ChatPage";
 import ProfilePage from "./pages/ProfilePage";
 
 import { ChatProvider } from "./chat/ChatContext";
+import PlaybookPage from "./pages/PlaybookPage";
+import ClientMaterialsPage from "./pages/ClientMaterialsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return getToken() ? <>{children}</> : <Navigate to="/login" replace />;
@@ -98,6 +100,8 @@ export default function App() {
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/playbook" element={<PlaybookPage />} />
+              <Route path="/materials" element={<ClientMaterialsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
