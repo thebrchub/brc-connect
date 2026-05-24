@@ -300,6 +300,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     ws.on("chat_message", (msg: unknown) => {
       const m = msg as Message;
+
+      // Enrich with sender name/avatar from cached room members (fixes "?" avatar in groups)
+      if (!m.sender_name && m.sender_id) {
+        const members = qc.getQueryData<import("./types").RoomMember[]>(["chat-members", m.room_id]);
+        const member = members?.find((mem) => mem.user_id === m.sender_id);
+        if (member) {
+          m.sender_name = member.user_name;
+          m.sender_avatar_url = member.user_avatar_url;
+        }
+      }
       
       // ── New Message Sound Logic ──
       if (m.sender_id !== currentUserId) {

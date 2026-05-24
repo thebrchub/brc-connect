@@ -359,6 +359,21 @@ export function useContacts() {
   });
 }
 
+// ── Search org contacts by name or email ──
+export function useSearchContacts(query: string) {
+  return useQuery({
+    queryKey: ["chat-contacts-search", query],
+    queryFn: () =>
+      api
+        .get<{ results: ChatUser[] }>(
+          `/chat/contacts/search?q=${encodeURIComponent(query)}&limit=10`
+        )
+        .then((r) => r.results),
+    enabled: query.length >= 2,
+    staleTime: 30_000,
+  });
+}
+
 // ── Group call mutations ──
 
 export function useStartGroupCall() {
@@ -413,6 +428,7 @@ export interface MessageSearchResult {
   content: string | null;
   created_at: string;
   sender_name: string;
+  sender_avatar_url: string;
   room_name: string;
 }
 

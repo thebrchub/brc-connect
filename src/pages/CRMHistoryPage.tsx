@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 const STATUS_COLORS: Record<string, string> = {
   contacted: "bg-blue-500/20 text-blue-400",
   follow_up: "bg-purple-500/20 text-purple-400",
+  revisit_later: "bg-amber-500/20 text-amber-400",
   interested: "bg-green-500/20 text-green-400",
   converted: "bg-emerald-500/20 text-emerald-400",
   not_interested: "bg-red-500/20 text-red-400",
@@ -26,17 +27,21 @@ export default function CRMHistoryPage() {
   
   // Smart local search state (persists across page changes)
   const [searchTerm, setSearchTerm] = useState("");
+  // Status filter
+  const [statusFilter, setStatusFilter] = useState("");
 
   const fetchHistory = useCallback(() => {
     setLoading(true);
-    api.get<PaginatedResponse<LeadActivity>>(`/crm/leads/history?page=${page}&page_size=20`)
+    const params = new URLSearchParams({ page: String(page), page_size: "20" });
+    if (statusFilter) params.set("status", statusFilter);
+    api.get<PaginatedResponse<LeadActivity>>(`/crm/leads/history?${params}`)
       .then((res) => {
         setLeads(res.data || []);
         setTotal(res.meta.total);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, statusFilter]);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
@@ -88,8 +93,26 @@ export default function CRMHistoryPage() {
           <p className="text-zinc-400 text-sm mt-1.5">Leads you've interected with ({total} total)</p>
         </div>
 
-        {/* Local Page Search Input */}
-        <div className="relative w-full sm:w-72 group">
+        {/* Filters Row */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="bg-zinc-900/80 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 transition-all shadow-sm"
+          >
+            <option value="">All Statuses</option>
+            <option value="contacted">Contacted</option>
+            <option value="follow_up">Follow Up</option>
+            <option value="revisit_later">Revisit Later</option>
+            <option value="interested">Interested</option>
+            <option value="converted">Converted</option>
+            <option value="not_interested">Not Interested</option>
+            <option value="closed">Closed</option>
+          </select>
+
+          {/* Local Page Search Input */}
+          <div className="relative w-full sm:w-72 group">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-orange-500 transition-colors" />
           <input
             type="text"
@@ -107,6 +130,7 @@ export default function CRMHistoryPage() {
               <X size={14} />
             </button>
           )}
+        </div>
         </div>
       </div>
 

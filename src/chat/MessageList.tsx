@@ -20,6 +20,8 @@ interface Props {
   isGroup?: boolean;
   highlightedMessageId?: string | null;
   highlightRequestKey?: number;
+  /** Lookup map: userId -> { name, avatar_url } for resolving sender info on realtime messages */
+  memberMap?: Map<string, { name: string; avatar_url: string }>;
 }
 
 function formatTime(dateStr: string): string {
@@ -55,6 +57,7 @@ export default function MessageList({
   isGroup,
   highlightedMessageId,
   highlightRequestKey,
+  memberMap,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -250,18 +253,22 @@ export default function MessageList({
                   }`}
                 >
                   {/* Sender avatar (group only, other's messages) */}
-                  {isGroup && !isMine && (
-                    <div className="w-7 shrink-0 mr-2 self-end">
-                      {showSender && (
-                        <Avatar name={msg.sender_name || "?"} avatarKey={msg.sender_avatar_url} size="sm" className="w-7 h-7 text-[10px]" />
-                      )}
-                    </div>
-                  )}
+                  {isGroup && !isMine && (() => {
+                    const senderName = msg.sender_name || memberMap?.get(msg.sender_id)?.name || "?";
+                    const senderAvatar = msg.sender_avatar_url || memberMap?.get(msg.sender_id)?.avatar_url;
+                    return (
+                      <div className="w-7 shrink-0 mr-2 self-end">
+                        {showSender && (
+                          <Avatar name={senderName} avatarKey={senderAvatar} size="sm" className="w-7 h-7 text-[10px]" />
+                        )}
+                      </div>
+                    );
+                  })()}
                   <div className={`relative max-w-[75%] ${isMine ? "items-end" : "items-start"}`}>
                     {/* Sender name */}
-                    {showSender && msg.sender_name && (
+                    {showSender && (msg.sender_name || memberMap?.get(msg.sender_id)?.name) && (
                       <p className="text-[10px] text-zinc-500 font-bold mb-1 ml-1">
-                        {msg.sender_name}
+                        {msg.sender_name || memberMap?.get(msg.sender_id)?.name}
                       </p>
                     )}
 
