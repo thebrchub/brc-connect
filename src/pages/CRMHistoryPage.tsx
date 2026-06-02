@@ -383,9 +383,22 @@ function HistoryRow({ lead, expanded, onToggle, onUpdate, updating }: HistoryRow
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-xs text-zinc-500 mr-1">Sources:</span>
                                 {lead.source.map((s) => (
-                                  <span key={s} className="px-2.5 py-1 bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 text-[11px] font-medium rounded-md">
+                                  <a
+                                    key={s}
+                                    href={
+                                      s === "google_maps" ? `https://www.google.com/maps/search/${encodeURIComponent(lead.business_name + " " + lead.city)}` :
+                                      s === "google" ? `https://www.google.com/search?q=${encodeURIComponent(lead.business_name + " " + lead.city)}` :
+                                      undefined
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className={`px-2.5 py-1 bg-zinc-800/50 border border-zinc-700/50 text-[11px] font-medium rounded-md transition-colors ${
+                                      s === "google_maps" || s === "google" ? "text-blue-400 hover:bg-zinc-800 hover:text-blue-300 cursor-pointer" : "text-zinc-300"
+                                    }`}
+                                  >
                                     {s}
-                                  </span>
+                                  </a>
                                 ))}
                               </div>
                             </div>
