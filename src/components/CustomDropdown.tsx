@@ -8,6 +8,7 @@ interface CustomDropdownProps {
   placeholder?: string;
   align?: "left" | "right";
   size?: "md" | "sm";
+  openDirection?: "top" | "bottom";
 }
 
 export default function CustomDropdown({ 
@@ -16,7 +17,8 @@ export default function CustomDropdown({
   onChange, 
   placeholder = "Select...", 
   align = "left",
-  size = "md" 
+  size = "md",
+  openDirection = "bottom"
 }: CustomDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const selectedLabel = options.find(o => o.value === value)?.label || placeholder;
@@ -39,7 +41,7 @@ export default function CustomDropdown({
         <>
           <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
           
-          <div className={`absolute ${align === "right" ? "right-0" : "left-0"} top-full mt-2 min-w-[140px] rounded-2xl border border-white/5 border-t-white/10 bg-gradient-to-b from-[#18181b] to-[#09090b] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_20px_40px_rgba(0,0,0,0.6)] z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200`}>
+          <div className={`absolute ${align === "right" ? "right-0" : "left-0"} ${openDirection === "top" ? "bottom-full mb-2" : "top-full mt-2"} min-w-[140px] rounded-2xl border border-white/5 border-t-white/10 bg-gradient-to-b from-[#18181b] to-[#09090b] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_20px_40px_rgba(0,0,0,0.6)] z-50 py-2 animate-in fade-in ${openDirection === "top" ? "slide-in-from-bottom-2" : "slide-in-from-top-2"} duration-200`}>
             {options.map((opt) => (
               <button
                 key={opt.value}

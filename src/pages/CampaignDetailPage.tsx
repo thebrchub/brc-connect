@@ -283,11 +283,12 @@ export default function CampaignDetailPage() {
                 value={assignedTo}
                 onChange={(val) => setAssignedTo(val)}
                 placeholder="-- Select Employee --"
+                openDirection="top"
                 options={[
                   { value: "", label: "-- Select Employee --" },
                   ...employees.map(emp => ({
                     value: emp.id,
-                    label: `${emp.name} (${emp.email})`
+                    label: emp.name
                   }))
                 ]}
               />
