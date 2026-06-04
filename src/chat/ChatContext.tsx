@@ -2,6 +2,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useCallback,
@@ -147,7 +148,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── Unread badge + browser notifications ──
-  const [unreadBadgeCount, setUnreadBadgeCount] = useState(0);
   const originalTitle = useRef(document.title);
   const flashTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const notifAudio = useRef<HTMLAudioElement | null>(null);
@@ -155,17 +155,37 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const faviconCanvas = useRef<HTMLCanvasElement | null>(null);
   const originalFavicon = useRef<string>("");
 
-  // Count unread messages from others across all rooms
-  useEffect(() => {
-    let count = 0;
+  const unreadBadgeCount = useMemo(() => {
+    const chatRooms = qc
+      .getQueriesData<{ pages: { rooms: RoomListItem[]; next_cursor: string }[] }>({ queryKey: ["chat-rooms"] })
+      .flatMap(([, data]) => data?.pages?.flatMap((page) => page.rooms) ?? []);
+
+    const roomMap = new Map(chatRooms.map((room) => [room.id, room] as const));
+    const rtCountByRoom = new Map<string, number>();
+
     for (const [roomId, msgs] of realtimeMessages) {
       const openedAt = roomOpenedAt.get(roomId) ?? 0;
-      count += msgs.filter(
-        (m) => m.sender_id !== currentUserId && new Date(m.created_at).getTime() > openedAt
-      ).length;
+      const incoming = msgs.filter((m) => {
+        if (m.sender_id === currentUserId) return false;
+        if (openedAt > 0) {
+          return new Date(m.created_at).getTime() > openedAt;
+        }
+        return true;
+      });
+      rtCountByRoom.set(roomId, incoming.length);
     }
-    setUnreadBadgeCount(count);
-  }, [realtimeMessages, roomOpenedAt, currentUserId]);
+
+    const roomIds = new Set<string>([
+      ...chatRooms.map((room) => room.id),
+      ...realtimeMessages.keys(),
+    ]);
+
+    return Array.from(roomIds).reduce((total, roomId) => {
+      const serverUnread = roomMap.get(roomId)?.unread_count ?? 0;
+      const realtimeUnread = rtCountByRoom.get(roomId) ?? 0;
+      return total + Math.max(serverUnread, realtimeUnread);
+    }, 0);
+  }, [qc, realtimeMessages, roomOpenedAt, currentUserId]);
 
   const hasIncomingCall = peerCall?.state === "ringing_in";
 
@@ -293,6 +313,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    qc.invalidateQueries({ queryKey: ["chat-rooms"] });
+    qc.refetchQueries({ queryKey: ["chat-rooms"], type: "active" });
+
     const ws = new ChatWS();
     wsRef.current = ws;
 

@@ -393,14 +393,17 @@ function LeadRow({ lead, expanded, onToggle, onUpdate, updating }: LeadRowProps)
                           </div>
                           
                           <div className="md:col-span-2">
-                            <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide block mb-2">Notes</label>
+                            <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide block mb-2">
+                              Notes <span className="text-red-400">*</span>
+                            </label>
                             <textarea
                               value={notes}
                               onChange={(e) => setNotes(e.target.value)}
                               rows={3}
                               className="w-full bg-black/50 border border-white/10 hover:border-white/20 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 transition-all resize-none"
-                              placeholder="Add context, conversation details, or specific requirements..."
+                              placeholder="Please add the specific reason for this status (for example, why it is 'Not Interested' or 'Revisit Later')."
                             />
+                            
                           </div>
 
                           <div>
@@ -430,9 +433,15 @@ function LeadRow({ lead, expanded, onToggle, onUpdate, updating }: LeadRowProps)
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+
+                              if (!notes.trim()) {
+                                toast.error("Please add a short reason for the selected status.");
+                                return;
+                              }
+
                               onUpdate(lead.activity_id, {
                                 status,
-                                notes: notes || null,
+                                notes: notes.trim(),
                                 next_action: nextAction || null,
                                 next_follow_up: nextFollowUp ? new Date(nextFollowUp).toISOString() : null,
                               });
