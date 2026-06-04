@@ -286,15 +286,17 @@ function HistoryRow({ lead, expanded, onToggle, onUpdate, updating }: HistoryRow
           ) : <span className="text-zinc-600">—</span>}
         </td>
         <td className="px-6 py-4 text-zinc-300 truncate">{lead.city}</td>
-        <td className="px-6 py-4">
-          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide whitespace-nowrap ${STATUS_COLORS[lead.status] || "bg-zinc-500/20 text-zinc-400"}`}>
-            {lead.status.replace("_", " ")}
-          </span>
+        <td className="px-6 py-4 align-middle">
+          <div className="flex items-center justify-center h-full">
+            <span className={`inline-flex max-w-[110px] items-center justify-center rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide text-center leading-none whitespace-nowrap ${STATUS_COLORS[lead.status] || "bg-zinc-500/20 text-zinc-400"}`}>
+              {lead.status.replace("_", " ")}
+            </span>
+          </div>
         </td>
-        <td className="px-6 py-4 text-zinc-400 text-xs">
+        <td className="px-6 py-4 text-zinc-400 text-xs align-top break-words min-w-0">
           {lead.last_contact ? new Date(lead.last_contact).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
         </td>
-        <td className="px-6 py-4 text-zinc-400 text-xs">
+        <td className="px-6 py-4 text-zinc-400 text-xs align-top break-words min-w-0">
           {lead.next_follow_up ? new Date(lead.next_follow_up).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
         </td>
       </tr>
