@@ -136,6 +136,28 @@ export default function CRMHistoryPage() {
         </div>
       </div>
 
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-zinc-500">Page {page} of {totalPages}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-white/10 text-zinc-300 hover:bg-white/5 disabled:opacity-30"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg border border-white/10 text-zinc-300 hover:bg-white/5 disabled:opacity-30"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-3xl border border-white/5 border-t-white/10 bg-gradient-to-b from-[#18181b] to-[#09090b] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_20px_40px_rgba(0,0,0,0.6)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[980px] text-sm table-fixed">
