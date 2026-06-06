@@ -95,6 +95,9 @@ export const MsgType = {
   SEND_CONFIRM: "send_confirm",
   PING: "ping",
   PONG: "pong",
+  // Room subscription
+  JOIN_ROOM: "join_room",
+  LEAVE_ROOM: "leave_room",
   // Group call lifecycle
   GROUP_CALL_STARTED: "group_call_started",
   GROUP_CALL_ENDED: "group_call_ended",

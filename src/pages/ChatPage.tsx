@@ -184,11 +184,12 @@ function ChatInner() {
         setShowDMModal(false);
         setActiveRoomId(room.id);
         setMobileSidebar(false);
+        ws?.joinRoom(room.id);
       } catch (e: unknown) {
         toast.error((e as Error).message || "Failed to create DM");
       }
     },
-    [createDM, setActiveRoomId]
+    [createDM, setActiveRoomId, ws]
   );
 
   const handleNewGroup = useCallback(
@@ -198,11 +199,12 @@ function ChatInner() {
         setShowGroupModal(false);
         setActiveRoomId(room.id);
         setMobileSidebar(false);
+        ws?.joinRoom(room.id);
       } catch (e: unknown) {
         toast.error((e as Error).message || "Failed to create group");
       }
     },
-    [createGroup, setActiveRoomId]
+    [createGroup, setActiveRoomId, ws]
   );
 
   const handleEdit = useCallback(
