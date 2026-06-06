@@ -22,6 +22,7 @@ import EmployeeManagementPage from "./pages/EmployeeManagementPage";
 import AdminManagementPage from "./pages/AdminManagementPage";
 import CRMDashboardPage from "./pages/CRMDashboardPage";
 import EmployeeActivityPage from "./pages/EmployeeActivityPage";
+import EmployeeSummaryPage from "./pages/EmployeeSummaryPage";
 import CalendarPage from "./pages/CalendarPage";
 import ChatPage from "./pages/ChatPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -91,6 +92,7 @@ export default function App() {
             <Route path="employees" element={<RoleGuard allowed={["admin"]}><EmployeeManagementPage /></RoleGuard>} />
             <Route path="crm" element={<RoleGuard allowed={["admin"]}><CRMDashboardPage /></RoleGuard>} />
             <Route path="crm/employees/:id" element={<RoleGuard allowed={["admin"]}><EmployeeActivityPage /></RoleGuard>} />
+            <Route path="crm/employees/:id/summary" element={<RoleGuard allowed={["admin"]}><EmployeeSummaryPage /></RoleGuard>} />
             {/* Super admin only */}
             <Route path="admins" element={<RoleGuard allowed={["super_admin"]}><AdminManagementPage /></RoleGuard>} />
             {/* Employee CRM routes */}

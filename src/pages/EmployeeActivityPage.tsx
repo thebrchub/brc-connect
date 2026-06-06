@@ -114,6 +114,12 @@ export default function EmployeeActivityPage() {
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white">{stats?.employee_name || "Employee"}</h1>
           <p className="text-zinc-400 text-sm mt-1.5">Performance & activity details</p>
+          <Link
+            to={`/crm/employees/${id}/summary`}
+            className="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
+            <TrendingUp size={12} /> View Summary (Daily/Weekly/Monthly)
+          </Link>
         </div>
         {engagement && (
           <div className="sm:ml-auto flex items-center gap-2">

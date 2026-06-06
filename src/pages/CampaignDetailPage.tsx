@@ -48,18 +48,20 @@ export default function CampaignDetailPage() {
   useEffect(() => {
     if (campaign?.assigned_to) {
       setAssignedTo(campaign.assigned_to);
+    } else {
+      setAssignedTo("");
     }
   }, [campaign?.assigned_to]);
 
   async function handleAssign() {
-    if (!assignedTo || !id) return;
+    if (!id) return;
     setAssigning(true);
     try {
       await api.patch(`/campaigns/${id}/assign`, { employee_id: assignedTo });
-      toast.success("Campaign assigned successfully");
+      toast.success(assignedTo ? "Campaign assigned successfully" : "Campaign unassigned successfully");
       refetch();
     } catch (err: any) {
-      toast.error(err.message || "Failed to assign");
+      toast.error(err.message || "Failed to update assignment");
     } finally {
       setAssigning(false);
     }
@@ -282,10 +284,10 @@ export default function CampaignDetailPage() {
               <CustomDropdown
                 value={assignedTo}
                 onChange={(val) => setAssignedTo(val)}
-                placeholder="-- Select Employee --"
+                placeholder="-- Unassigned --"
                 openDirection="top"
                 options={[
-                  { value: "", label: "-- Select Employee --" },
+                  { value: "", label: "-- Unassigned --" },
                   ...employees.map(emp => ({
                     value: emp.id,
                     label: emp.name
@@ -295,10 +297,10 @@ export default function CampaignDetailPage() {
             </div>
             <button
               onClick={handleAssign}
-              disabled={!assignedTo || assigning}
+              disabled={assigning}
               className="px-6 py-3 rounded-xl bg-gradient-to-r from-accent-start to-accent-end text-sm font-extrabold text-zinc-950 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_8px_16px_rgba(52,211,153,0.3)] transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
             >
-              {assigning ? "Assigning..." : "Assign Campaign"}
+              {assigning ? "Saving..." : assignedTo ? "Assign Campaign" : "Unassign Campaign"}
             </button>
           </div>
           {campaign?.assigned_to && (
