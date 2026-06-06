@@ -54,8 +54,8 @@ export default function EmployeeSummaryPage() {
     setLoading(true);
     setError("");
     api
-      .get(`/crm/employees/${id}/summary?period=${period}`)
-      .then((res) => setData(res.data))
+      .get<SummaryResponse>(`/crm/employees/${id}/summary?period=${period}`)
+      .then((res) => setData(res))
       .catch((err) => setError(err.message || "Failed to load summary"))
       .finally(() => setLoading(false));
   }, [id, period]);
