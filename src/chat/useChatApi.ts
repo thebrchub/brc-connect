@@ -49,7 +49,7 @@ export async function uploadChatFile(file: File): Promise<{ fileUrl: string; med
   else if (file.type.startsWith("video/")) mediaType = "video";
   else if (file.type.startsWith("audio/")) mediaType = "audio";
 
-  return { fileUrl: presign.file_url, mediaType };
+  return { fileUrl: presign.key, mediaType };
 }
 
 /** Resolve a chat file key to a presigned download URL. */
@@ -58,12 +58,28 @@ export async function getChatFileUrl(key: string): Promise<string> {
   return url;
 }
 
+function normalizeChatKey(mediaUrl?: string) {
+  if (!mediaUrl) return undefined;
+
+  try {
+    const parsed = new URL(mediaUrl);
+    const path = parsed.pathname;
+    const idx = path.indexOf("/chat/");
+    if (idx >= 0) {
+      const key = path.slice(idx + 1).split("?")[0].split("#")[0];
+      return key.startsWith("chat/") ? key : `chat/${key}`;
+    }
+  } catch {
+    // fall back to plain string handling
+  }
+
+  const raw = mediaUrl.split("/chat/").pop()?.split("?")[0]?.split("#")[0];
+  return raw ? `chat/${raw}` : mediaUrl;
+}
+
 /** Hook that resolves a media_url (S3 key like chat/...) to a presigned download URL. */
 export function useChatFileUrl(mediaUrl?: string) {
-  // Extract key from full public URL or use raw key
-  const key = mediaUrl?.includes("/chat/")
-    ? "chat/" + mediaUrl.split("/chat/").pop()
-    : mediaUrl;
+  const key = normalizeChatKey(mediaUrl);
 
   return useQuery({
     queryKey: ["chat-file-url", key],

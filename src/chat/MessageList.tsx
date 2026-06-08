@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useMemo, useState } from "react";
-import { Check, CheckCheck, Pencil, Trash2, Reply, Download, FileText, X, AlertTriangle, ChevronDown } from "lucide-react";
+import { Check, CheckCheck, Pencil, Trash2, Reply, Download, FileText, X, AlertTriangle, ChevronDown, ExternalLink } from "lucide-react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import type { Message } from "./types";
 import { useChatFileUrl } from "./useChatApi";
 import Avatar from "./Avatar";
+import { extractFirstUrl, fetchLinkPreview, type LinkPreviewData } from "./linkPreview";
 
 interface Props {
   messages: Message[];
@@ -322,11 +323,15 @@ export default function MessageList({
                               <>
                                 <MediaPreview url={msg.media_url} type={msg.media_type} fileName={fn} />
                                 {caption && <p className="whitespace-pre-wrap break-words text-sm mt-1">{caption}</p>}
+                                {caption && <LinkPreviewCard text={caption} />}
                               </>
                             );
                           })()}
                           {msg.content && !msg.media_url && (
-                            <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                            <>
+                              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                              <LinkPreviewCard text={msg.content} />
+                            </>
                           )}
                         </>
                       )}
@@ -477,26 +482,58 @@ function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
   );
 }
 
+function getFileExtension(url = "") {
+  return url.split("?")[0].split("#")[0].toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] ?? "";
+}
+
+function isImageType(type?: string, url = "") {
+  const mime = (type || "").toLowerCase();
+  const ext = getFileExtension(url);
+  return mime === "image" || mime.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"].includes(ext);
+}
+
+function isVideoType(type?: string, url = "") {
+  const mime = (type || "").toLowerCase();
+  const ext = getFileExtension(url);
+  return mime === "video" || mime.startsWith("video/") || ["mp4", "webm", "ogg", "mov"].includes(ext);
+}
+
+function isAudioType(type?: string, url = "") {
+  const mime = (type || "").toLowerCase();
+  const ext = getFileExtension(url);
+  return mime === "audio" || mime.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a", "aac"].includes(ext);
+}
+
+function needsResolvedChatUrl(url: string) {
+  return url.startsWith("chat/") || url.includes("/chat/");
+}
+
 // ── Media preview component ──
 function MediaPreview({ url, type, fileName }: { url: string; type?: string; fileName?: string }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [lightbox, setLightbox] = useState(false);
-  const { data: resolvedUrl } = useChatFileUrl(url);
+  const { data: resolvedUrl, isLoading: resolvingUrl } = useChatFileUrl(url);
+  const waitingForResolvedUrl = needsResolvedChatUrl(url) && !resolvedUrl;
   const src = resolvedUrl || url;
 
-  if (type === "image" || type?.startsWith("image")) {
+  useEffect(() => {
+    setImgLoaded(false);
+    setImgError(false);
+  }, [src]);
+
+  if (isImageType(type, url)) {
     return (
       <div className="mb-1 relative">
-        {!imgLoaded && !imgError && (
+        {(!imgLoaded || waitingForResolvedUrl || resolvingUrl) && !imgError && (
           <div className="w-64 h-48 rounded-lg bg-white/5 animate-pulse" />
         )}
-        {!imgError ? (
+        {!imgError && !waitingForResolvedUrl ? (
           <>
             <img
               src={src}
               alt="attachment"
-              className={`max-w-full max-h-96 rounded-lg cursor-pointer hover:opacity-90 transition-opacity ${
+              className={`w-full max-w-[280px] max-h-[240px] rounded-xl object-contain cursor-zoom-in hover:opacity-95 transition-opacity ${
                 imgLoaded ? "" : "hidden"
               }`}
               onLoad={() => setImgLoaded(true)}
@@ -505,14 +542,22 @@ function MediaPreview({ url, type, fileName }: { url: string; type?: string; fil
             />
             {lightbox && <ImageLightbox src={src} onClose={() => setLightbox(false)} />}
           </>
-        ) : (
+        ) : imgError ? (
           <FileDownloadCard url={src} name={fileName} />
-        )}
+        ) : null}
       </div>
     );
   }
 
-  if (type === "video" || type?.startsWith("video")) {
+  if ((isVideoType(type, url) || isAudioType(type, url)) && waitingForResolvedUrl) {
+    return (
+      <div className="mb-1">
+        <div className="h-12 w-full max-w-[280px] rounded-lg bg-white/5 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (isVideoType(type, url)) {
     return (
       <div className="mb-1">
         <video
@@ -525,7 +570,7 @@ function MediaPreview({ url, type, fileName }: { url: string; type?: string; fil
     );
   }
 
-  if (type === "audio" || type?.startsWith("audio")) {
+  if (isAudioType(type, url)) {
     return (
       <div className="mb-1">
         <audio src={src} controls preload="metadata" className="w-full max-w-[280px]" />
@@ -533,7 +578,54 @@ function MediaPreview({ url, type, fileName }: { url: string; type?: string; fil
     );
   }
 
+  if (waitingForResolvedUrl) {
+    return (
+      <div className="mb-1">
+        <div className="h-10 w-full max-w-[280px] rounded-lg bg-white/5 animate-pulse" />
+      </div>
+    );
+  }
+
   return <FileDownloadCard url={src} name={fileName} />;
+}
+
+function LinkPreviewCard({ text }: { text: string }) {
+  const [preview, setPreview] = useState<LinkPreviewData | null>(null);
+
+  useEffect(() => {
+    const url = extractFirstUrl(text);
+    if (!url) {
+      setPreview(null);
+      return;
+    }
+
+    let cancelled = false;
+    fetchLinkPreview(url).then((data) => {
+      if (!cancelled) setPreview(data);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [text]);
+
+  if (!preview) return null;
+
+  return (
+    <a
+      href={preview.url}
+      target="_blank"
+      rel="noreferrer"
+      className="mt-2 block rounded-xl border border-white/10 bg-black/20 p-3 text-left hover:bg-white/[0.04] transition-colors"
+    >
+      <p className="mt-1 text-sm font-semibold text-white">{preview.title}</p>
+      <p className="mt-1 text-xs text-zinc-400">{preview.description}</p>
+      <p className="mt-2 text-[11px] text-zinc-500 break-all">{preview.url}</p>
+      <span className="mt-2 inline-flex items-center gap-1 text-[11px] text-accent-start">
+        Open link <ExternalLink size={12} />
+      </span>
+    </a>
+  );
 }
 
 function FileDownloadCard({ url, name }: { url: string; name?: string }) {

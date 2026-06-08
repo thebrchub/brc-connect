@@ -109,7 +109,7 @@ export default function EmployeeSummaryPage() {
             <thead className="bg-black/30">
               <tr className="border-b border-white/5 text-zinc-400 text-left">
                 <th className="px-6 py-4 font-medium"><Calendar size={14} className="inline mr-1.5" />Period</th>
-                <th className="px-4 py-4 font-medium text-center">Total</th>
+                {/* <th className="px-4 py-4 font-medium text-center">Total</th> */}
                 <th className="px-4 py-4 font-medium text-center">Contacted</th>
                 <th className="px-4 py-4 font-medium text-center">Conversions</th>
                 <th className="px-4 py-4 font-medium text-center">Follow-ups</th>
@@ -127,7 +127,7 @@ export default function EmployeeSummaryPage() {
                     <td className="px-6 py-4 text-zinc-300 font-medium whitespace-nowrap">
                       {formatPeriodLabel(row.period_start, period)}
                     </td>
-                    <td className="px-4 py-4 text-center text-zinc-300">{row.total_leads}</td>
+                    {/* <td className="px-4 py-4 text-center text-zinc-300">{row.total_leads}</td> */}
                     <td className="px-4 py-4 text-center text-cyan-400">{row.contacted}</td>
                     <td className="px-4 py-4 text-center text-emerald-400">{row.conversions}</td>
                     <td className="px-4 py-4 text-center text-orange-400">{row.follow_ups}</td>
