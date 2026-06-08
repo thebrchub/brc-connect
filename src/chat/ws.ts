@@ -42,6 +42,7 @@ export class ChatWS {
   private maxBackoff = 30_000;
   private disposed = false;
   private pingInterval: ReturnType<typeof setInterval> | null = null;
+  private pendingQueue: Uint8Array[] = [];
 
   state: ConnState = "disconnected";
 
@@ -61,6 +62,7 @@ export class ChatWS {
       this.attempt = 0;
       this.emit("state", this.state);
       this.startPing();
+      this.flushPending();
     };
 
     this.ws.onclose = () => {
@@ -146,6 +148,14 @@ export class ChatWS {
     this.send(envelope);
   }
 
+  joinRoom(roomId: string) {
+    const envelope = encodeEnvelope({
+      type: MsgType.JOIN_ROOM,
+      roomId,
+    });
+    this.send(envelope);
+  }
+
   // ── 1:1 call signaling ──
 
   sendCallRing(callId: string, to: string, hasVideo: boolean) {
@@ -222,6 +232,17 @@ export class ChatWS {
   private send(data: Uint8Array) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(new Uint8Array(data) as unknown as ArrayBuffer);
+    } else {
+      this.pendingQueue.push(data);
+    }
+  }
+
+  private flushPending() {
+    while (this.pendingQueue.length > 0) {
+      const data = this.pendingQueue.shift()!;
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(new Uint8Array(data) as unknown as ArrayBuffer);
+      }
     }
   }
 
