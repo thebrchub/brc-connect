@@ -86,8 +86,21 @@ export class ChatWS {
     this.disposed = true;
     this.stopPing();
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    this.ws?.close();
+
+    const ws = this.ws;
     this.ws = null;
+
+    if (ws) {
+      ws.onopen = null;
+      ws.onclose = null;
+      ws.onerror = null;
+      ws.onmessage = null;
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    }
+
     this.state = "disconnected";
     this.emit("state", this.state);
   }

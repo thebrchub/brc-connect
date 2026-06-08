@@ -15,6 +15,7 @@ import { MsgType } from "./types";
 import type { WireMessageEdit, WireSendConfirm, WireGroupCallEvent } from "./proto";
 import { getToken } from "../api/client";
 import { getUserId } from "../hooks/useRole";
+import { useRooms } from "./useChatApi";
 
 interface TypingInfo {
   userId: string;
@@ -135,6 +136,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [lastCallSignal, setLastCallSignal] = useState<CallSignalEvent | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const qc = useQueryClient();
+  const { data: roomPages } = useRooms();
+  const chatRooms = useMemo(
+    () => roomPages?.pages.flatMap((page) => page.rooms) ?? [],
+    [roomPages]
+  );
 
   // ── Global Active Room Persistence ──
   const [activeRoomId, _setActiveRoomId] = useState<string | null>(() => sessionStorage.getItem("activeChatRoomId"));
@@ -156,10 +162,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const originalFavicon = useRef<string>("");
 
   const unreadBadgeCount = useMemo(() => {
-    const chatRooms = qc
-      .getQueriesData<{ pages: { rooms: RoomListItem[]; next_cursor: string }[] }>({ queryKey: ["chat-rooms"] })
-      .flatMap(([, data]) => data?.pages?.flatMap((page) => page.rooms) ?? []);
-
     const roomMap = new Map(chatRooms.map((room) => [room.id, room] as const));
     const rtCountByRoom = new Map<string, number>();
 
@@ -185,7 +187,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const realtimeUnread = rtCountByRoom.get(roomId) ?? 0;
       return total + Math.max(serverUnread, realtimeUnread);
     }, 0);
-  }, [qc, realtimeMessages, roomOpenedAt, currentUserId]);
+  }, [chatRooms, realtimeMessages, roomOpenedAt, currentUserId]);
 
   const hasIncomingCall = peerCall?.state === "ringing_in";
 
