@@ -348,6 +348,13 @@ function HistoryRow({ lead, expanded, onToggle, onUpdate, updating }: HistoryRow
                           Lead Intelligence
                         </h4>
                         <div className="space-y-3.5 text-sm bg-white/[0.01] border border-white/5 rounded-2xl p-5 md:p-6">
+                          <div className="flex items-center gap-3 text-zinc-300">
+                            <div className="p-1.5 rounded-md bg-white/5 text-zinc-500 shrink-0">
+                              <Tag size={14} />
+                            </div>
+                            <span>{lead.business_name || <span className="text-zinc-600 italic">Unknown Company</span>}</span>
+                          </div>
+
                           <div className="flex items-center gap-3 text-zinc-300 group min-w-0">
                             <div className="p-1.5 rounded-md bg-white/5 text-zinc-500 group-hover:text-blue-400 group-hover:bg-blue-500/10 transition-colors shrink-0">
                               <Globe size={14} />
